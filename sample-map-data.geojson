@@ -1,0 +1,105 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Central Park",
+        "Sigla": "CP",
+        "description": "Large urban park in Manhattan",
+        "area": "843 acres",
+        "established": "1857"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-73.9580, 40.8006],
+          [-73.9494, 40.7971],
+          [-73.9494, 40.7646],
+          [-73.9580, 40.7680],
+          [-73.9580, 40.8006]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Brooklyn Bridge Park",
+        "Sigla": "BBP",
+        "description": "Waterfront park in Brooklyn",
+        "area": "85 acres",
+        "established": "2010"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-73.9967, 40.7014],
+          [-73.9967, 40.6956],
+          [-73.9941, 40.6956],
+          [-73.9941, 40.7014],
+          [-73.9967, 40.7014]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Times Square",
+        "Sigla": "TS",
+        "description": "Commercial intersection and tourist destination",
+        "area": "Commercial district",
+        "established": "1904"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-73.9876, 40.7589],
+          [-73.9876, 40.7550],
+          [-73.9829, 40.7550],
+          [-73.9829, 40.7589],
+          [-73.9876, 40.7589]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Golden Gate Park",
+        "Sigla": "GGP",
+        "description": "Large urban park in San Francisco",
+        "area": "1017 acres",
+        "established": "1870"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.5108, 37.7749],
+          [-122.4536, 37.7749],
+          [-122.4536, 37.7677],
+          [-122.5108, 37.7677],
+          [-122.5108, 37.7749]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Griffith Park",
+        "Sigla": "GP",
+        "description": "Large municipal park in Los Angeles",
+        "area": "4310 acres",
+        "established": "1896"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-118.3017, 34.1367],
+          [-118.2723, 34.1367],
+          [-118.2723, 34.1169],
+          [-118.3017, 34.1169],
+          [-118.3017, 34.1367]
+        ]]
+      }
+    }
+  ]
+}
