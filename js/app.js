@@ -74,9 +74,14 @@ class ImageGeoApp {
 
         // Configuration button
         const configBtn = document.getElementById('configBtn');
-        configBtn.addEventListener('click', () => {
-            this.showConfigDialog();
-        });
+        if (configBtn) {
+            configBtn.addEventListener('click', () => {
+                console.log('Config button clicked!');
+                this.showConfigDialog();
+            });
+        } else {
+            console.error('Config button not found!');
+        }
 
         // Setup drag and drop for welcome page
         this.setupDragAndDrop();
@@ -490,15 +495,20 @@ class ImageGeoApp {
                         // Update the list without rebuilding (to avoid losing the current view)
                         this.updateImageListItem(index);
                         
+                        // Also display the image when radio button status changes
+                        console.log('Selecting image from radio button change:', index);
+                        this.selectImage(index);
+                        
                         // Update the selected image display
                         this.displaySelectedImage();
                     }
                 });
                 
-                // Also add click handler to ensure clicks are processed
+                // Add click handler to prevent event bubbling but allow radio functionality
                 radio.addEventListener('click', (e) => {
                     console.log('Radio button click detected:', e.target.value);
                     e.stopPropagation(); // Prevent the main list item click handler
+                    // Don't call selectImage here as it will be called in the change event
                 });
             });
 
@@ -1238,7 +1248,7 @@ class ImageGeoApp {
             await this.pdfGenerator.generateReport(selectedImages, this.geojsonData);
             
             this.hideLoading();
-            this.showSuccess(`PDF report generated successfully for ${selectedImages.length} selected images`);
+            // PDF generated silently - no success message
         } catch (error) {
             this.hideLoading();
             console.error('Error generating PDF:', error);
@@ -1250,6 +1260,7 @@ class ImageGeoApp {
      * Show configuration dialog
      */
     showConfigDialog() {
+        console.log('showConfigDialog called!');
         // Create modal backdrop
         const modal = document.createElement('div');
         modal.className = 'config-modal-backdrop';
@@ -1320,46 +1331,70 @@ class ImageGeoApp {
                             </div>
                             
                             <div class="config-preview">
-                                <h3>👁️ Pré-visualização da Capa</h3>
+                                <h4>👁️ Pré-visualização do PDF</h4>
+                                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
+                                    Visualização das páginas inicial e final do relatório em formato A4 paisagem
+                                </p>
                                 <div class="pdf-preview" id="pdfPreview">
-                                    <div class="preview-page">
-                                        <div class="preview-header">
-                                            <div class="preview-header1" id="preview-header1">DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE</div>
-                                            <div class="preview-header2" id="preview-header2">UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS</div>
+                                    <div class="preview-pages-container">
+                                        <!-- Cover Page Preview -->
+                                        <div>
+                                            <div class="preview-page-label">📄 Página 1 - Capa</div>
+                                            <div class="preview-page cover-page">
+                                                <div class="preview-header">
+                                                    <div class="preview-header1" id="preview-header1">DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE</div>
+                                                    <div class="preview-header2" id="preview-header2">UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS</div>
+                                                </div>
+                                                
+                                                <div class="preview-title" id="preview-title">RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC</div>
+                                                
+                                                <div class="preview-date-section">
+                                                    <span class="preview-date-prefix" id="preview-datePrefix">DATA DO RELATÓRIO:</span>
+                                                    <span class="preview-date">${new Date().toLocaleDateString('pt-BR')}</span>
+                                                </div>
+                                                
+                                                <div class="preview-reference" id="preview-referenceNumber">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</div>
+                                                
+                                                <div class="preview-description" id="preview-description">Vistoria de campo realizada pelos técnicos da DAV.</div>
+                                                
+                                                <div class="preview-footer">
+                                                    <div class="preview-address" id="preview-address">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</div>
+                                                    <div class="preview-postal">CEP: <span id="preview-postalCode">13083-877</span> - Tel: (19) 3521-7010 - Fax: (19) 3521-7635</div>
+                                                    <div class="preview-contact" id="preview-contactPhone">mascard@unicamp.br</div>
+                                                </div>
+                                            </div>
                                         </div>
                                         
-                                        <div class="preview-title" id="preview-title">RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC</div>
-                                        
-                                        <div class="preview-date-section">
-                                            <div class="preview-date-prefix" id="preview-datePrefix">DATA DO RELATÓRIO:</div>
-                                            <div class="preview-date">${new Date().toLocaleDateString('pt-BR')}</div>
+                                        <!-- Signature Page Preview -->
+                                        <div>
+                                            <div class="preview-page-label">✍️ Página Final - Assinaturas</div>
+                                            <div class="preview-page signature-page">
+                                                <div class="signature-preview">
+                                                    <div class="signature-box">
+                                                        <div class="signature-label" id="preview-sign1">PREPOSTO CONTRATANTE</div>
+                                                        <div class="signature-line"></div>
+                                                        <div class="signature-name" id="preview-sign1Name">sign1_name</div>
+                                                        <div class="signature-date">Data: ......./......./...........</div>
+                                                    </div>
+                                                    <div class="signature-box">
+                                                        <div class="signature-label" id="preview-sign2">PREPOSTO CONTRATADA</div>
+                                                        <div class="signature-line"></div>
+                                                        <div class="signature-name" id="preview-sign2Name">sign2_name</div>
+                                                        <div class="signature-date">Data: ......./......./...........</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="signature-location">
+                                                    <span id="preview-signature-address">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</span>, ${new Date().toLocaleDateString('pt-BR')}
+                                                </div>
+                                                
+                                                <div class="preview-footer">
+                                                    <div class="preview-address" id="preview-address-sig">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</div>
+                                                    <div class="preview-postal">CEP: <span id="preview-postalCode-sig">13083-877</span> - Tel: (19) 3521-7010 - Fax: (19) 3521-7635</div>
+                                                    <div class="preview-contact" id="preview-contactPhone-sig">mascard@unicamp.br</div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        
-                                        <div class="preview-reference" id="preview-referenceNumber">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</div>
-                                        
-                                        <div class="preview-description" id="preview-description">Vistoria de campo realizada pelos técnicos da DAV.</div>
-                                        
-                                        <div class="preview-footer">
-                                            <div class="preview-address" id="preview-address">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</div>
-                                            <div class="preview-postal" id="preview-postalCode">13083-877</div>
-                                            <div class="preview-contact" id="preview-contactPhone">mascard@unicamp.br</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <h3>✍️ Pré-visualização das Assinaturas</h3>
-                                <div class="signature-preview">
-                                    <div class="signature-box">
-                                        <div class="signature-label" id="preview-sign1">PREPOSTO CONTRATANTE</div>
-                                        <div class="signature-line"></div>
-                                        <div class="signature-name" id="preview-sign1Name">sign1_name</div>
-                                        <div class="signature-date">Data: ___/___/______</div>
-                                    </div>
-                                    <div class="signature-box">
-                                        <div class="signature-label" id="preview-sign2">PREPOSTO CONTRATADA</div>
-                                        <div class="signature-line"></div>
-                                        <div class="signature-name" id="preview-sign2Name">sign2_name</div>
-                                        <div class="signature-date">Data: ___/___/______</div>
                                     </div>
                                 </div>
                             </div>
@@ -1493,16 +1528,16 @@ class ImageGeoApp {
     }
 
     /**
-     * Update configuration preview
+     * Update configuration preview for both cover and signature pages
      */
     updateConfigPreview() {
-        const fields = [
+        // Cover page fields
+        const coverFields = [
             'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
-            'description', 'address', 'postalCode', 'contactPhone',
-            'sign1', 'sign1Name', 'sign2', 'sign2Name'
+            'description', 'address', 'postalCode', 'contactPhone'
         ];
 
-        fields.forEach(field => {
+        coverFields.forEach(field => {
             const inputElement = document.getElementById(`config-${field}`);
             const previewElement = document.getElementById(`preview-${field}`);
             
@@ -1510,6 +1545,40 @@ class ImageGeoApp {
                 previewElement.textContent = inputElement.value;
             }
         });
+
+        // Signature page fields
+        const signatureFields = ['sign1', 'sign1Name', 'sign2', 'sign2Name'];
+        
+        signatureFields.forEach(field => {
+            const inputElement = document.getElementById(`config-${field}`);
+            const previewElement = document.getElementById(`preview-${field}`);
+            
+            if (inputElement && previewElement) {
+                previewElement.textContent = inputElement.value;
+            }
+        });
+
+        // Update signature page footer elements (they have different IDs)
+        const addressElement = document.getElementById('config-address');
+        const postalElement = document.getElementById('config-postalCode');
+        const contactElement = document.getElementById('config-contactPhone');
+
+        if (addressElement) {
+            const sigAddressElement = document.getElementById('preview-address-sig');
+            const sigLocationElement = document.getElementById('preview-signature-address');
+            if (sigAddressElement) sigAddressElement.textContent = addressElement.value;
+            if (sigLocationElement) sigLocationElement.textContent = addressElement.value;
+        }
+
+        if (postalElement) {
+            const sigPostalElement = document.getElementById('preview-postalCode-sig');
+            if (sigPostalElement) sigPostalElement.textContent = postalElement.value;
+        }
+
+        if (contactElement) {
+            const sigContactElement = document.getElementById('preview-contactPhone-sig');
+            if (sigContactElement) sigContactElement.textContent = contactElement.value;
+        }
     }
 
     /**

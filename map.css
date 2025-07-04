@@ -1,0 +1,59 @@
+/* Map Styles */
+
+.map-card #map {
+    height: 400px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.map-section {
+    padding: 1rem;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.map-section h3 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+}
+
+/* Image Location Map Container */
+.image-map-container {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0; /* Prevent shrinking */
+    width: 70%; /* Reduce width to 70% of container */
+    margin-left: auto; /* Center the container */
+    margin-right: auto; /* Center the container */
+}
+
+.image-map-container h4 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+    font-size: 1rem;
+}
+
+.image-location-map {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    height: 500px;
+    min-height: 500px;
+    width: 100%; /* Fill the container */
+}
+
+/* Map popup customization for image location */
+.map-popup h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2d3748;
+    font-size: 0.9rem;
+}
+
+.map-popup p {
+    margin: 0.25rem 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
