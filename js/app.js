@@ -18,7 +18,6 @@ class ImageGeoApp {
     initializeApp() {
         this.setupEventListeners();
         this.loadDefaultGeoJSON(); // Load map.geojson automatically
-        this.updateProcessButton(); // Initialize process button state
         console.log('Image Geolocation Processor initialized');
     }
 
@@ -45,9 +44,6 @@ class ImageGeoApp {
             
             document.getElementById('geojsonInfo').textContent = '✅ map.geojson loaded successfully';
             
-            // Update process button state now that GeoJSON is loaded
-            this.updateProcessButton();
-            
         } catch (error) {
             console.error('Error loading default GeoJSON:', error);
             document.getElementById('geojsonInfo').textContent = '❌ Failed to load map.geojson - Run from web server';
@@ -61,68 +57,26 @@ class ImageGeoApp {
         // Image file input
         const imageInput = document.getElementById('imageInput');
         imageInput.addEventListener('change', (e) => {
-            this.updateProcessButton(); // Update process button state
-            // Don't auto-process, wait for user to click process button
+            this.handleImageUpload(e.target.files);
         });
-
-        // Process button on welcome page
-        const processBtn = document.getElementById('processBtn');
-        if (processBtn) {
-            processBtn.addEventListener('click', () => {
-                const imageInput = document.getElementById('imageInput');
-                if (imageInput.files && imageInput.files.length > 0) {
-                    this.handleImageUpload(imageInput.files);
-                }
-            });
-        }
 
         // Back button
         const backButton = document.getElementById('backButton');
-        if (backButton) {
-            backButton.addEventListener('click', () => {
-                this.showWelcomePage();
-            });
-        }
+        backButton.addEventListener('click', () => {
+            this.showWelcomePage();
+        });
 
         // PDF generation button
         const generatePDFBtn = document.getElementById('generatePDF');
-        if (generatePDFBtn) {
-            generatePDFBtn.addEventListener('click', () => {
-                this.generatePDFReport();
-            });
-        }
+        generatePDFBtn.addEventListener('click', () => {
+            this.generatePDFReport();
+        });
 
         // Configuration button
         const configBtn = document.getElementById('configBtn');
-        if (configBtn) {
-            configBtn.addEventListener('click', () => {
-                this.showConfigDialog();
-            });
-        }
-
-        // Select All / Select None buttons
-        const selectAllBtn = document.getElementById('selectAllBtn');
-        const selectNoneBtn = document.getElementById('selectNoneBtn');
-        
-        if (selectAllBtn) {
-            selectAllBtn.addEventListener('click', () => {
-                this.selectAllImages(true);
-            });
-        }
-        
-        if (selectNoneBtn) {
-            selectNoneBtn.addEventListener('click', () => {
-                this.selectAllImages(false);
-            });
-        }
-
-        // Modal close button
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => {
-                this.hideConfigDialog();
-            });
-        }
+        configBtn.addEventListener('click', () => {
+            this.showConfigDialog();
+        });
 
         // Setup drag and drop for welcome page
         this.setupDragAndDrop();
@@ -160,8 +114,7 @@ class ImageGeoApp {
                 if (imageFiles.length > 0) {
                     const imageInput = document.getElementById('imageInput');
                     imageInput.files = e.dataTransfer.files;
-                    this.updateProcessButton(); // Update process button state
-                    // Don't auto-process, wait for user to click process button
+                    this.handleImageUpload(imageFiles);
                 }
             });
         }
@@ -298,9 +251,6 @@ class ImageGeoApp {
             welcomePage.style.display = 'none';
             viewerPage.style.display = 'block';
             
-            // Initialize map if not already done
-            this.initializeMapManager();
-            
             // Update the interface with processed results
             this.updateImageList();
             // Removed updateStatsSummary() since we hid the stats section
@@ -312,32 +262,6 @@ class ImageGeoApp {
             console.log('Successfully switched to viewer page');
         } else {
             console.error('Could not find page elements');
-        }
-    }
-
-    /**
-     * Initialize the map manager for the main map
-     */
-    initializeMapManager() {
-        if (!this.mapManager && document.getElementById('map')) {
-            try {
-                console.log('Initializing MapManager...');
-                this.mapManager = new MapManager('map');
-                
-                // Load GeoJSON data if available
-                if (this.geojsonData) {
-                    this.mapManager.loadGeoJSON(this.geojsonData);
-                }
-                
-                // Add processed images to map
-                if (this.processedImages && this.processedImages.length > 0) {
-                    this.mapManager.addImages(this.processedImages);
-                }
-                
-                console.log('MapManager initialized successfully');
-            } catch (error) {
-                console.error('Error initializing MapManager:', error);
-            }
         }
     }
 
@@ -389,11 +313,6 @@ class ImageGeoApp {
             this.hideLoading();
             this.showViewerPage();
             
-            // Add images to map if map manager is available
-            if (this.mapManager) {
-                this.mapManager.addImages(this.processedImages);
-            }
-            
         } catch (error) {
             this.hideLoading();
             console.error('Error processing images:', error);
@@ -410,47 +329,38 @@ class ImageGeoApp {
 
         this.processedImages.forEach(image => {
             if (image.hasGPS) {
-                // Ensure we have a map manager for analysis
+                // Create a temporary map manager just for analysis if we don't have one
                 if (!this.mapManager) {
-                    // Create a temporary analysis function if MapManager isn't available yet
-                    image.locationInfo = this.analyzePointLocation(image.latitude, image.longitude);
-                } else {
-                    // Use the proper MapManager for analysis
-                    image.locationInfo = this.mapManager.analyzePointLocation(
-                        image.latitude, 
-                        image.longitude
-                    );
+                    this.mapManager = { analyzePointLocation: (lat, lng) => {
+                        // Simple point-in-polygon check using Turf.js
+                        const point = turf.point([lng, lat]);
+                        
+                        for (const feature of this.geojsonData.features) {
+                            if (turf.booleanPointInPolygon(point, feature)) {
+                                return {
+                                    status: 'Inside region',
+                                    region: feature.properties.name || 'Unknown Region',
+                                    sigla: feature.properties.Sigla || feature.properties.sigla || null,
+                                    feature: feature
+                                };
+                            }
+                        }
+                        
+                        return {
+                            status: 'Outside mapped regions',
+                            region: null,
+                            sigla: null,
+                            feature: null
+                        };
+                    }};
                 }
+                
+                image.locationInfo = this.mapManager.analyzePointLocation(
+                    image.latitude, 
+                    image.longitude
+                );
             }
         });
-    }
-
-    /**
-     * Analyze a point location against GeoJSON data (fallback method)
-     */
-    analyzePointLocation(lat, lng) {
-        if (!this.geojsonData) return null;
-        
-        // Simple point-in-polygon check using Turf.js
-        const point = turf.point([lng, lat]);
-        
-        for (const feature of this.geojsonData.features) {
-            if (turf.booleanPointInPolygon(point, feature)) {
-                return {
-                    status: 'Inside region',
-                    region: feature.properties.name || 'Unknown Region',
-                    sigla: feature.properties.Sigla || feature.properties.sigla || null,
-                    feature: feature
-                };
-            }
-        }
-        
-        return {
-            status: 'Outside mapped regions',
-            region: null,
-            sigla: null,
-            feature: null
-        };
     }
 
 
@@ -680,20 +590,27 @@ class ImageGeoApp {
 
         if (this.selectedImageIndex === null || this.selectedImageIndex >= this.processedImages.length) {
             placeholder.style.display = 'flex';
+            currentImage.style.display = 'none';
             imageDisplay.style.display = 'none';
             return;
         }
 
         const image = this.processedImages[this.selectedImageIndex];
+        console.log('Displaying image:', image.filename);
         
         placeholder.style.display = 'none';
         imageDisplay.style.display = 'block';
+        
+        console.log('Placeholder display:', placeholder.style.display);
+        console.log('ImageDisplay display:', imageDisplay.style.display);
 
         // Display image
         if (image.originalFile) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 currentImage.src = e.target.result;
+                currentImage.style.display = 'block';
+                console.log('Image source set and display changed to block');
             };
             reader.readAsDataURL(image.originalFile);
         }
@@ -814,47 +731,14 @@ class ImageGeoApp {
         console.log('Image has GPS:', image.hasGPS);
         console.log('Image coordinates:', image.latitude, image.longitude);
         
-        let mapContainer = document.getElementById('imageMapContainer');
-        let mapElement = document.getElementById('imageMap');
+        const mapContainer = document.getElementById('imageMapContainer');
+        const mapElement = document.getElementById('imageMap');
         
         console.log('Map container found:', !!mapContainer);
         console.log('Map element found:', !!mapElement);
         
-        // Debug: Check what elements actually exist
-        console.log('imageDisplay element:', document.getElementById('imageDisplay'));
-        console.log('imageDetails element:', document.getElementById('imageDetails'));
-        console.log('All elements with id containing "Map":', Array.from(document.querySelectorAll('[id*="Map"]')));
-        console.log('All elements with class containing "map":', Array.from(document.querySelectorAll('[class*="map"]')));
-        
-        if (mapContainer) {
-            console.log('Map container current display style:', mapContainer.style.display);
-        } else {
-            console.log('❌ imageMapContainer element does not exist in DOM!');
-            // Let's try to create it dynamically
-            const imageDisplay = document.getElementById('imageDisplay');
-            if (imageDisplay) {
-                console.log('Found imageDisplay, adding map container dynamically...');
-                const newMapContainer = document.createElement('div');
-                newMapContainer.id = 'imageMapContainer';
-                newMapContainer.className = 'image-map-container';
-                newMapContainer.style.display = 'block';
-                newMapContainer.innerHTML = `
-                    <h4>📍 Image Location</h4>
-                    <div id="imageMap" class="image-location-map"></div>
-                `;
-                imageDisplay.appendChild(newMapContainer);
-                console.log('Map container created dynamically');
-                
-                // Try again
-                mapContainer = document.getElementById('imageMapContainer');
-                mapElement = document.getElementById('imageMap');
-                console.log('New map container found:', !!mapContainer);
-                console.log('New map element found:', !!mapElement);
-            }
-        }
-        
         if (!mapContainer || !mapElement) {
-            console.error('Map container or element not found!');
+            console.error('Map container or element not found in HTML!');
             return;
         }
         
@@ -869,17 +753,25 @@ class ImageGeoApp {
             return;
         }
         
-        // TEMPORARY TEST: Always show map with default location if no GPS
+        // Check if image has valid GPS coordinates
         let lat = image.latitude;
         let lng = image.longitude;
-        let hasValidCoords = image.hasGPS && lat && lng;
+        let hasValidCoords = image.hasGPS && lat !== undefined && lng !== undefined && lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+        
+        console.log('GPS validation check:');
+        console.log('- image.hasGPS:', image.hasGPS);
+        console.log('- lat:', lat, 'type:', typeof lat);
+        console.log('- lng:', lng, 'type:', typeof lng);
+        console.log('- hasValidCoords:', hasValidCoords);
         
         if (!hasValidCoords) {
-            // Use default coordinates (Lisbon, Portugal) for testing
-            lat = 38.7223;
-            lng = -9.1393;
-            console.log('Using default coordinates for testing');
+            console.log('Image has no valid GPS data, hiding map');
+            mapContainer.style.display = 'none';
+            return;
         }
+        
+        console.log('Image has GPS coordinates, showing map');
+        console.log('Coordinates:', lat, lng);
         
         if (typeof L === 'undefined') {
             console.error('Leaflet not loaded');
@@ -934,7 +826,7 @@ class ImageGeoApp {
                     <div class="map-popup">
                         <h4>📷 ${image.filename}</h4>
                         <p><strong>📍 Coordinates:</strong><br>
-                        ${hasValidCoords ? AppUtils.formatCoordinates(lat, lng) : 'Default location (no GPS)'}</p>
+                        ${AppUtils.formatCoordinates(lat, lng)}</p>
                 `;
                 
                 if (image.locationInfo && image.locationInfo.sigla) {
@@ -1004,9 +896,25 @@ class ImageGeoApp {
      * Clean up the current image map
      */
     cleanupImageMap() {
+        console.log('Cleaning up image map...');
         if (this.currentImageMap) {
+            console.log('Removing previous image map');
             this.currentImageMap.remove();
             this.currentImageMap = null;
+        }
+        
+        // Also clear the map container content
+        const mapElement = document.getElementById('imageMap');
+        if (mapElement) {
+            console.log('Clearing map element content');
+            mapElement.innerHTML = '';
+        }
+        
+        // Hide map container by default - will be shown if image has GPS
+        const mapContainer = document.getElementById('imageMapContainer');
+        if (mapContainer) {
+            console.log('Hiding map container');
+            mapContainer.style.display = 'none';
         }
     }
 
@@ -1037,11 +945,7 @@ class ImageGeoApp {
             const oldSigla = image.locationInfo?.sigla;
             
             // Analyze new location
-            if (this.mapManager && this.mapManager.analyzePointLocation) {
-                image.locationInfo = this.mapManager.analyzePointLocation(newLat, newLng);
-            } else {
-                image.locationInfo = this.analyzePointLocation(newLat, newLng);
-            }
+            image.locationInfo = this.mapManager.analyzePointLocation(newLat, newLng);
             
             const newSigla = image.locationInfo?.sigla;
             
@@ -1343,102 +1247,243 @@ class ImageGeoApp {
     }
 
     /**
-     * Select or deselect all images
-     */
-    selectAllImages(select) {
-        this.processedImages.forEach(image => {
-            image.imageSelected = select;
-        });
-        
-        // Update the image list display
-        this.updateImageList();
-        
-        // Update button states
-        this.enableButtons();
-        
-        console.log(`${select ? 'Selected' : 'Deselected'} all images`);
-    }
-
-    /**
      * Show configuration dialog
      */
     showConfigDialog() {
-        const modal = document.getElementById('configModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            this.setupConfigModal();
-        }
+        // Create modal backdrop
+        const modal = document.createElement('div');
+        modal.className = 'config-modal-backdrop';
+        modal.innerHTML = `
+            <div class="config-modal">
+                <div class="config-header">
+                    <h2>⚙️ Configurações</h2>
+                    <button class="config-close-btn" type="button">✕</button>
+                </div>
+                
+                <div class="config-tabs">
+                    <button class="config-tab-btn active" data-tab="pdf">📄 PDF</button>
+                    <button class="config-tab-btn" data-tab="questionario">📋 Questionário</button>
+                </div>
+                
+                <div class="config-content">
+                    <!-- PDF Configuration Tab -->
+                    <div class="config-tab-content active" data-tab="pdf">
+                        <div class="config-split">
+                            <div class="config-form">
+                                <h3>📄 Configuração da Capa</h3>
+                                <div class="config-section">
+                                    <label>Header 1:</label>
+                                    <input type="text" id="config-header1" value="DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE">
+                                    
+                                    <label>Header 2:</label>
+                                    <input type="text" id="config-header2" value="UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS">
+                                    
+                                    <label>Título:</label>
+                                    <input type="text" id="config-title" value="RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC">
+                                    
+                                    <label>Prefixo da Data:</label>
+                                    <input type="text" id="config-datePrefix" value="DATA DO RELATÓRIO:">
+                                    
+                                    <label>Número de Referência:</label>
+                                    <textarea id="config-referenceNumber" rows="2">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</textarea>
+                                    
+                                    <label>Descrição:</label>
+                                    <textarea id="config-description" rows="3">Vistoria de campo realizada pelos técnicos da DAV.</textarea>
+                                </div>
+                                
+                                <h3>📍 Informações de Rodapé</h3>
+                                <div class="config-section">
+                                    <label>Endereço:</label>
+                                    <input type="text" id="config-address" value="Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP">
+                                    
+                                    <label>CEP:</label>
+                                    <input type="text" id="config-postalCode" value="13083-877">
+                                    
+                                    <label>Telefone de Contato:</label>
+                                    <input type="text" id="config-contactPhone" value="mascard@unicamp.br">
+                                </div>
+                                
+                                <h3>✍️ Página Final - Assinaturas</h3>
+                                <div class="config-section">
+                                    <label>Assinatura 1:</label>
+                                    <input type="text" id="config-sign1" value="PREPOSTO CONTRATANTE">
+                                    
+                                    <label>Nome 1:</label>
+                                    <input type="text" id="config-sign1Name" value="sign1_name">
+                                    
+                                    <label>Assinatura 2:</label>
+                                    <input type="text" id="config-sign2" value="PREPOSTO CONTRATADA">
+                                    
+                                    <label>Nome 2:</label>
+                                    <input type="text" id="config-sign2Name" value="sign2_name">
+                                </div>
+                            </div>
+                            
+                            <div class="config-preview">
+                                <h3>👁️ Pré-visualização da Capa</h3>
+                                <div class="pdf-preview" id="pdfPreview">
+                                    <div class="preview-page">
+                                        <div class="preview-header">
+                                            <div class="preview-header1" id="preview-header1">DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE</div>
+                                            <div class="preview-header2" id="preview-header2">UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS</div>
+                                        </div>
+                                        
+                                        <div class="preview-title" id="preview-title">RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC</div>
+                                        
+                                        <div class="preview-date-section">
+                                            <div class="preview-date-prefix" id="preview-datePrefix">DATA DO RELATÓRIO:</div>
+                                            <div class="preview-date">${new Date().toLocaleDateString('pt-BR')}</div>
+                                        </div>
+                                        
+                                        <div class="preview-reference" id="preview-referenceNumber">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</div>
+                                        
+                                        <div class="preview-description" id="preview-description">Vistoria de campo realizada pelos técnicos da DAV.</div>
+                                        
+                                        <div class="preview-footer">
+                                            <div class="preview-address" id="preview-address">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</div>
+                                            <div class="preview-postal" id="preview-postalCode">13083-877</div>
+                                            <div class="preview-contact" id="preview-contactPhone">mascard@unicamp.br</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h3>✍️ Pré-visualização das Assinaturas</h3>
+                                <div class="signature-preview">
+                                    <div class="signature-box">
+                                        <div class="signature-label" id="preview-sign1">PREPOSTO CONTRATANTE</div>
+                                        <div class="signature-line"></div>
+                                        <div class="signature-name" id="preview-sign1Name">sign1_name</div>
+                                        <div class="signature-date">Data: ___/___/______</div>
+                                    </div>
+                                    <div class="signature-box">
+                                        <div class="signature-label" id="preview-sign2">PREPOSTO CONTRATADA</div>
+                                        <div class="signature-line"></div>
+                                        <div class="signature-name" id="preview-sign2Name">sign2_name</div>
+                                        <div class="signature-date">Data: ___/___/______</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Questionário Configuration Tab -->
+                    <div class="config-tab-content" data-tab="questionario">
+                        <div class="config-form">
+                            <h3>📋 Configuração do Questionário</h3>
+                            <div class="config-section">
+                                <p>⚠️ Esta funcionalidade será implementada em uma versão futura.</p>
+                                <p>Aqui você poderá configurar:</p>
+                                <ul>
+                                    <li>Perguntas personalizadas para cada imagem</li>
+                                    <li>Campos de observação</li>
+                                    <li>Critérios de avaliação</li>
+                                    <li>Templates de questionário</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="config-footer">
+                    <button class="config-btn config-btn-cancel" type="button">Cancelar</button>
+                    <button class="config-btn config-btn-save" type="button">💾 Salvar Configurações</button>
+                </div>
+            </div>
+        `;
+
+        // Add to body
+        document.body.appendChild(modal);
+
+        // Load current configuration
+        this.loadConfigurationIntoDialog();
+
+        // Setup event handlers
+        this.setupConfigDialogEvents(modal);
+
+        // Setup live preview updates
+        this.setupConfigPreviewUpdates();
+
+        // Show modal with animation
+        setTimeout(() => {
+            modal.style.opacity = '1';
+        }, 10);
     }
 
     /**
-     * Hide configuration dialog
+     * Load current configuration into dialog
      */
-    hideConfigDialog() {
-        const modal = document.getElementById('configModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
+    loadConfigurationIntoDialog() {
+        const config = this.getPDFConfiguration();
+        
+        // Load values into form fields
+        const fields = [
+            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
+            'description', 'address', 'postalCode', 'contactPhone',
+            'sign1', 'sign1Name', 'sign2', 'sign2Name'
+        ];
+
+        fields.forEach(field => {
+            const element = document.getElementById(`config-${field}`);
+            if (element && config[field] !== undefined) {
+                element.value = config[field];
+            }
+        });
+
+        // Update preview
+        this.updateConfigPreview();
     }
 
     /**
-     * Setup configuration modal functionality
+     * Setup event handlers for config dialog
      */
-    setupConfigModal() {
-        // Only set up once
-        if (this.configModalSetup) return;
-        this.configModalSetup = true;
-        
-        // Tab switching
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabId = btn.dataset.tab;
-                
-                // Remove active class from all tabs and contents
-                tabBtns.forEach(tb => tb.classList.remove('active'));
-                tabContents.forEach(tc => tc.classList.remove('active'));
-                
-                // Add active class to clicked tab
-                btn.classList.add('active');
-                
-                // Show corresponding content
-                const targetContent = document.getElementById(tabId + 'Tab');
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                }
-            });
+    setupConfigDialogEvents(modal) {
+        // Close button
+        modal.querySelector('.config-close-btn').addEventListener('click', () => {
+            this.closeConfigDialog(modal);
+        });
+
+        // Cancel button
+        modal.querySelector('.config-btn-cancel').addEventListener('click', () => {
+            this.closeConfigDialog(modal);
         });
 
         // Save button
-        const saveBtn = document.getElementById('saveConfigBtn');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                this.saveConfiguration();
-            });
-        }
+        modal.querySelector('.config-btn-save').addEventListener('click', () => {
+            this.saveConfiguration(modal);
+        });
 
-        // Cancel button
-        const cancelBtn = document.getElementById('cancelBtn');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                this.hideConfigDialog();
+        // Tab switching
+        modal.querySelectorAll('.config-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.switchConfigTab(btn.dataset.tab);
             });
-        }
-        
-        // Load saved configuration
-        this.loadConfiguration();
-        
-        // Set up real-time preview updates
-        const inputIds = [
-            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber', 
-            'description', 'address', 'postalCode', 'contactPhone', 
+        });
+
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeConfigDialog(modal);
+            }
+        });
+
+        // Prevent modal content clicks from closing modal
+        modal.querySelector('.config-modal').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    /**
+     * Setup live preview updates
+     */
+    setupConfigPreviewUpdates() {
+        const fields = [
+            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
+            'description', 'address', 'postalCode', 'contactPhone',
             'sign1', 'sign1Name', 'sign2', 'sign2Name'
         ];
-        
-        inputIds.forEach(id => {
-            const element = document.getElementById(id);
+
+        fields.forEach(field => {
+            const element = document.getElementById(`config-${field}`);
             if (element) {
                 element.addEventListener('input', () => {
                     this.updateConfigPreview();
@@ -1448,118 +1493,150 @@ class ImageGeoApp {
     }
 
     /**
-     * Save configuration
-     */
-    saveConfiguration() {
-        // Get form values
-        const config = {
-            header1: document.getElementById('header1')?.value || '',
-            header2: document.getElementById('header2')?.value || '',
-            title: document.getElementById('title')?.value || '',
-            datePrefix: document.getElementById('datePrefix')?.value || '',
-            referenceNumber: document.getElementById('referenceNumber')?.value || '',
-            description: document.getElementById('description')?.value || '',
-            address: document.getElementById('address')?.value || '',
-            postalCode: document.getElementById('postalCode')?.value || '',
-            contactPhone: document.getElementById('contactPhone')?.value || '',
-            sign1: document.getElementById('sign1')?.value || '',
-            sign1Name: document.getElementById('sign1Name')?.value || '',
-            sign2: document.getElementById('sign2')?.value || '',
-            sign2Name: document.getElementById('sign2Name')?.value || ''
-        };
-
-        // Save to localStorage
-        localStorage.setItem('pdfConfiguration', JSON.stringify(config));
-        
-        // Update preview
-        this.updateConfigPreview();
-        
-        console.log('Configuration saved:', config);
-        this.hideConfigDialog();
-        
-        // Show success message
-        this.showSuccess('Configuration saved successfully!');
-    }
-
-    /**
-     * Load configuration from localStorage
-     */
-    loadConfiguration() {
-        try {
-            const savedConfig = localStorage.getItem('pdfConfiguration');
-            if (savedConfig) {
-                const config = JSON.parse(savedConfig);
-                
-                // Populate form fields
-                Object.keys(config).forEach(key => {
-                    const element = document.getElementById(key);
-                    if (element) {
-                        element.value = config[key];
-                    }
-                });
-                
-                // Update preview
-                this.updateConfigPreview();
-                
-                console.log('Configuration loaded from localStorage');
-            }
-        } catch (error) {
-            console.error('Error loading configuration:', error);
-        }
-    }
-    
-    /**
      * Update configuration preview
      */
     updateConfigPreview() {
-        // Update preview elements
-        const previewElements = [
-            'previewHeader1', 'previewHeader2', 'previewTitle', 'previewDatePrefix',
-            'previewReference', 'previewDescription', 'previewAddress', 'previewPostalCode',
-            'previewContactPhone', 'previewSign1', 'previewSign1Name', 'previewSign2', 'previewSign2Name'
+        const fields = [
+            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
+            'description', 'address', 'postalCode', 'contactPhone',
+            'sign1', 'sign1Name', 'sign2', 'sign2Name'
         ];
-        
-        previewElements.forEach(previewId => {
-            const sourceId = previewId.replace('preview', '').toLowerCase();
-            const sourceElement = document.getElementById(sourceId);
-            const previewElement = document.getElementById(previewId);
+
+        fields.forEach(field => {
+            const inputElement = document.getElementById(`config-${field}`);
+            const previewElement = document.getElementById(`preview-${field}`);
             
-            if (sourceElement && previewElement) {
-                previewElement.textContent = sourceElement.value;
+            if (inputElement && previewElement) {
+                previewElement.textContent = inputElement.value;
             }
         });
-        
-        // Update current date
-        const dateElement = document.getElementById('previewDate');
-        if (dateElement) {
-            dateElement.textContent = new Date().toLocaleDateString('pt-BR');
-        }
     }
 
     /**
-     * Update process button state
+     * Switch configuration tab
      */
-    updateProcessButton() {
-        const processBtn = document.getElementById('processBtn');
-        const imageInput = document.getElementById('imageInput');
-        
-        if (processBtn && imageInput) {
-            const hasImages = imageInput.files && imageInput.files.length > 0;
-            const hasGeoJSON = this.geojsonData !== null;
-            
-            processBtn.disabled = !hasImages;
-            
-            if (hasImages && hasGeoJSON) {
-                processBtn.textContent = `🚀 Process ${imageInput.files.length} Images`;
-            } else if (hasImages) {
-                processBtn.textContent = `🚀 Process ${imageInput.files.length} Images (No map data)`;
-            } else {
-                processBtn.textContent = '🚀 Process Images';
-            }
-        }
+    switchConfigTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.config-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`.config-tab-btn[data-tab="${tabName}"]`).classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.config-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.querySelector(`.config-tab-content[data-tab="${tabName}"]`).classList.add('active');
     }
 
-    // ...existing code...
+    /**
+     * Save configuration
+     */
+    saveConfiguration(modal) {
+        const config = {};
+        
+        const fields = [
+            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
+            'description', 'address', 'postalCode', 'contactPhone',
+            'sign1', 'sign1Name', 'sign2', 'sign2Name'
+        ];
+
+        fields.forEach(field => {
+            const element = document.getElementById(`config-${field}`);
+            if (element) {
+                config[field] = element.value;
+            }
+        });
+
+        // Save to localStorage
+        localStorage.setItem('pdfConfiguration', JSON.stringify(config));
+
+        // Close modal
+        this.closeConfigDialog(modal);
+
+        // Show success notification
+        this.showConfigSavedNotification();
+    }
+
+    /**
+     * Close configuration dialog
+     */
+    closeConfigDialog(modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }, 300);
+    }
+
+    /**
+     * Get PDF configuration (used by PDF generator)
+     */
+    getPDFConfiguration() {
+        // Try to get from localStorage
+        const savedConfig = localStorage.getItem('pdfConfiguration');
+        if (savedConfig) {
+            try {
+                return JSON.parse(savedConfig);
+            } catch (error) {
+                console.error('Error parsing saved configuration:', error);
+            }
+        }
+        
+        // Return default configuration
+        return {
+            header1: 'DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE',
+            header2: 'UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS',
+            title: 'RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC',
+            datePrefix: 'DATA DO RELATÓRIO:',
+            referenceNumber: 'CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA',
+            description: 'Vistoria de campo realizada pelos técnicos da DAV.',
+            address: 'Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP',
+            postalCode: '13083-877',
+            contactPhone: 'mascard@unicamp.br',
+            sign1: 'PREPOSTO CONTRATANTE',
+            sign1Name: 'sign1_name',
+            sign2: 'PREPOSTO CONTRATADA',
+            sign2Name: 'sign2_name'
+        };
+    }
+
+    /**
+     * Show configuration saved notification
+     */
+    showConfigSavedNotification() {
+        const notification = document.createElement('div');
+        notification.className = 'config-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10000;
+            font-weight: 500;
+        `;
+        
+        notification.textContent = '💾 Configurações salvas com sucesso!';
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.transition = 'opacity 0.3s ease';
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
+        }, 3000);
+    }
 }
 
 // Initialize the application when the DOM is loaded

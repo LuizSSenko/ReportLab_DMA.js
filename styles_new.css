@@ -489,6 +489,7 @@ input[type="file"] {
     border-right: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
+    height: calc(100vh - 100px); /* Set fixed height to match right panel */
 }
 
 .panel-header {
@@ -580,22 +581,42 @@ input[type="file"] {
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    height: calc(100vh - 100px); /* Set fixed height */
 }
 
 .image-viewer {
     flex: 1;
     display: flex;
     flex-direction: column;
+    overflow-y: auto; /* Enable scrolling for the right panel content */
 }
 
 .image-display {
-    height: 400px;
+    height: 300px; /* Reduced height to allow more content below */
     background: #f8fafc;
     display: flex;
     align-items: center;
     justify-content: center;
     border-bottom: 1px solid #e2e8f0;
     position: relative;
+    overflow: hidden;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.image-display #currentImage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.image-display .placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
 }
 
 .image-display img {
@@ -612,7 +633,7 @@ input[type="file"] {
 
 .image-details {
     padding: 1.5rem;
-    overflow-y: auto;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .detail-row {
@@ -639,6 +660,7 @@ input[type="file"] {
 .map-section {
     padding: 1rem;
     border-top: 1px solid #e2e8f0;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .map-section h3 {
@@ -767,23 +789,25 @@ input[type="file"] {
 /* Image Location Map Container */
 .image-map-container {
     margin-top: 1rem;
-    background: white;
-    border-radius: 8px;
     padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .image-map-container h4 {
-    margin: 0 0 0.5rem 0;
-    color: #4a5568;
-    font-size: 0.9rem;
-    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+    font-size: 1rem;
 }
 
 .image-location-map {
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    overflow: hidden;
+    border-radius: 8px;
+    background: #fff;
+    height: 250px;
+    min-height: 250px;
 }
 
 /* Map popup customization for image location */
