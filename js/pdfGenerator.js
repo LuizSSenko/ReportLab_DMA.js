@@ -553,25 +553,47 @@ class PDFGenerator {
         
         // Location (Google Maps URL - wrapped for smaller space)
         this.doc.setFont('helvetica', 'bold');
-        this.doc.text('Localização:  ', metadataX, metadataY);
+        this.doc.text('Localização: ', metadataX, metadataY);
         
         if (image.hasGPS && image.latitude && image.longitude) {
-            const googleMapsUrl = `https://www.google.com/maps?q=${image.latitude},${image.longitude}`;
+            // Round coordinates to 6 decimal places to avoid precision issues
+            const roundedLat = parseFloat(image.latitude).toFixed(6);
+            const roundedLng = parseFloat(image.longitude).toFixed(6);
+            const googleMapsUrl = `https://www.google.com/maps?q=${roundedLat},${roundedLng}`;
+            
             this.doc.setFont('helvetica', 'normal');
             this.doc.setTextColor(0, 0, 255); // Blue color for link
             
-            const locLabelWidth = this.doc.getTextWidth('Localização: ');
-            // Wrap URL to fit in available metadata space
-            const urlLines = this.doc.splitTextToSize(googleMapsUrl, availableMetadataWidth - locLabelWidth);
-            this.doc.text(urlLines, metadataX + locLabelWidth, metadataY);
-            metadataY += urlLines.length * (lineSpacing - 1); // Further reduced spacing after location
+            const locLabelWidth = this.doc.getTextWidth('Localização: ') + 1; // Add 1mm extra space
+            
+            // Check if URL fits in one line
+            const availableUrlWidth = availableMetadataWidth - locLabelWidth;
+            const urlWidth = this.doc.getTextWidth(googleMapsUrl);
+            
+            if (urlWidth <= availableUrlWidth) {
+                // URL fits in one line
+                this.doc.text(googleMapsUrl, metadataX + locLabelWidth, metadataY);
+                metadataY += lineSpacing;
+            } else {
+                // Break URL at a safe point (after the domain)
+                const baseUrl = 'https://www.google.com/maps?q=';
+                const coordinates = `${roundedLat},${roundedLng}`;
+                
+                // First line: base URL
+                this.doc.text(baseUrl, metadataX + locLabelWidth, metadataY);
+                metadataY += lineSpacing;
+                
+                // Second line: coordinates (indented slightly)
+                this.doc.text(coordinates, metadataX + locLabelWidth + 5, metadataY);
+                metadataY += lineSpacing;
+            }
             
             this.doc.setTextColor(0, 0, 0); // Reset to black
         } else {
             this.doc.setFont('helvetica', 'normal');
-            const locLabelWidth = this.doc.getTextWidth('Localização: ');
+            const locLabelWidth = this.doc.getTextWidth('Localização: ') + 1; // Add 1mm extra space
             this.doc.text('GPS não disponível', metadataX + locLabelWidth, metadataY);
-            metadataY += (lineSpacing - 2); // Further reduced spacing after location
+            metadataY += lineSpacing;
         }
         
         // Status (reduced space from Localização)
