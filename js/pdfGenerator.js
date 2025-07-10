@@ -42,7 +42,7 @@ class PDFGenerator {
 
             // Generate cover page
             AppUtils.showLoading('Adding cover page...');
-            this.addCoverPage(config);
+            await this.addCoverPage(config);
             
             // Add image pages with progress tracking
             AppUtils.showLoading('Processing images...');
@@ -98,9 +98,9 @@ class PDFGenerator {
         for (let i = 1; i <= totalPages; i++) {
             this.doc.setPage(i);
             
-            // Clear the existing page number area
+            // Clear only the page number area (not the entire bottom section)
             this.doc.setFillColor(255, 255, 255);
-            this.doc.rect(0, this.pageHeight - 10, this.pageWidth, 10, 'F');
+            this.doc.rect(this.pageWidth / 2 - 20, this.pageHeight - 8, 40, 8, 'F'); // Clear only around page number
             
             // Add page number at bottom center (as shown in screenshots)
             this.doc.setFontSize(8);
@@ -152,22 +152,64 @@ class PDFGenerator {
     /**
      * Add cover page with configuration data (corrected coordinate system)
      */
-    addCoverPage(config) {
+    async addCoverPage(config) {
         // Logo positioning (correcting coordinate system - Y starts from top)
-        this.doc.setDrawColor(150, 150, 150);
-        this.doc.setFillColor(240, 240, 240);
         const leftLogoOffset = 15; // 15mm from left edge
         const rightLogoOffset = 40; // 40mm from right edge
+        const maxLogoHeight = 25; // Maximum height for logos
         
-        // Left logo positioned 30mm from top
-        this.doc.rect(leftLogoOffset, 30, 25, 25, 'FD');
-        this.doc.setFontSize(8);
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.text('LOGO', leftLogoOffset + 12.5, 42.5, { align: 'center' });
+        // Load and add logos with original proportions
+        try {
+            // Left logo (Logo_001.png) positioned 30mm from top
+            const leftLogoInfo = await this.loadLogoImage('Logo_001.png');
+            
+            // Calculate dimensions to fit within max height while preserving aspect ratio
+            let leftLogoHeight = maxLogoHeight;
+            let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
+            
+            // If width exceeds reasonable bounds, scale down
+            if (leftLogoWidth > 40) {
+                leftLogoWidth = 40;
+                leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+            }
+            
+            this.doc.addImage(leftLogoInfo.dataURL, 'PNG', leftLogoOffset, 30, leftLogoWidth, leftLogoHeight);
+        } catch (error) {
+            console.error('Error loading left logo:', error);
+            // Fallback to placeholder
+            this.doc.setDrawColor(150, 150, 150);
+            this.doc.setFillColor(240, 240, 240);
+            this.doc.rect(leftLogoOffset, 30, 25, 25, 'FD');
+            this.doc.setFontSize(8);
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.text('LOGO', leftLogoOffset + 12.5, 42.5, { align: 'center' });
+        }
         
-        // Right logo positioned 24mm from top
-        this.doc.rect(this.pageWidth - rightLogoOffset - 25, 24, 25, 25, 'FD');
-        this.doc.text('LOGO', this.pageWidth - rightLogoOffset - 12.5, 36.5, { align: 'center' });
+        try {
+            // Right logo (Logo_002.png) positioned 24mm from top
+            const rightLogoInfo = await this.loadLogoImage('Logo_002.png');
+            
+            // Calculate dimensions to fit within max height while preserving aspect ratio
+            let rightLogoHeight = maxLogoHeight;
+            let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
+            
+            // If width exceeds reasonable bounds, scale down
+            if (rightLogoWidth > 40) {
+                rightLogoWidth = 40;
+                rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+            }
+            
+            this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - rightLogoOffset - rightLogoWidth, 24, rightLogoWidth, rightLogoHeight);
+        } catch (error) {
+            console.error('Error loading right logo:', error);
+            // Fallback to placeholder
+            this.doc.setDrawColor(150, 150, 150);
+            this.doc.setFillColor(240, 240, 240);
+            this.doc.rect(this.pageWidth - rightLogoOffset - 25, 24, 25, 25, 'FD');
+            this.doc.setFontSize(8);
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.text('LOGO', this.pageWidth - rightLogoOffset - 12.5, 36.5, { align: 'center' });
+        }
         
         // Header section (positioned from top)
         // Header 1 at 30mm from top
@@ -264,7 +306,7 @@ class PDFGenerator {
                 this.currentY = this.margin;
                 
                 // Add page header
-                this.addImagePageHeader();
+                await this.addImagePageHeader();
                 
                 // Process first image (left side)
                 try {
@@ -319,7 +361,7 @@ class PDFGenerator {
         
         // Image area background (light pink/beige)
         this.doc.setFillColor(245, 230, 230);
-        this.doc.rect(columnX, startY, columnWidth, usableHeight, 'F');
+        this.doc.rect(columnX, startY, columnWidth, usableHeight + 14, 'F');
         
         // Calculate image dimensions while preserving aspect ratio
         const maxImageWidth = columnWidth - 20;
@@ -416,8 +458,8 @@ class PDFGenerator {
         
         // Add metadata below the image with reduced spacing
         const metadataX = imageX;
-        let metadataY = imageY + imageHeight + 8; // Slightly reduced spacing after image
-        const lineSpacing = 6; // Reduced from 7 to 6
+        let metadataY = imageY + imageHeight + 6; // Further reduced spacing after image
+        const lineSpacing = 4; // Reduced from 6 to 4 for tighter spacing
         const availableMetadataWidth = columnWidth - 20;
         
         // Index number (formatted as 001, 002, etc.)
@@ -425,7 +467,7 @@ class PDFGenerator {
         this.doc.setFont('helvetica', 'bold');
         this.doc.setTextColor(0, 0, 0);
         this.doc.text(`${String(index).padStart(3, '0')}`, metadataX, metadataY);
-        metadataY += lineSpacing; // Reduced space between index and Data e Hora
+        metadataY += lineSpacing - 1; // Reduced space between index and Data e Hora
         
         // Date and time - Fixed EXIF parsing
         let dateTimeStr = 'Data não disponível';
@@ -511,7 +553,7 @@ class PDFGenerator {
         
         // Location (Google Maps URL - wrapped for smaller space)
         this.doc.setFont('helvetica', 'bold');
-        this.doc.text('Localização: ', metadataX, metadataY);
+        this.doc.text('Localização:  ', metadataX, metadataY);
         
         if (image.hasGPS && image.latitude && image.longitude) {
             const googleMapsUrl = `https://www.google.com/maps?q=${image.latitude},${image.longitude}`;
@@ -522,14 +564,14 @@ class PDFGenerator {
             // Wrap URL to fit in available metadata space
             const urlLines = this.doc.splitTextToSize(googleMapsUrl, availableMetadataWidth - locLabelWidth);
             this.doc.text(urlLines, metadataX + locLabelWidth, metadataY);
-            metadataY += urlLines.length * (lineSpacing - 1); // Reduced spacing after location
+            metadataY += urlLines.length * (lineSpacing - 1); // Further reduced spacing after location
             
             this.doc.setTextColor(0, 0, 0); // Reset to black
         } else {
             this.doc.setFont('helvetica', 'normal');
             const locLabelWidth = this.doc.getTextWidth('Localização: ');
             this.doc.text('GPS não disponível', metadataX + locLabelWidth, metadataY);
-            metadataY += (lineSpacing - 1); // Reduced spacing after location
+            metadataY += (lineSpacing - 2); // Further reduced spacing after location
         }
         
         // Status (reduced space from Localização)
@@ -552,7 +594,7 @@ class PDFGenerator {
         this.doc.setTextColor(0, 0, 0); // Reset to black
         
         // Add any additional comments or notes in remaining space
-        metadataY += lineSpacing + 3;
+        metadataY += lineSpacing + 1; // Reduced spacing before observations
         if (image.comments) {
             this.doc.setFont('helvetica', 'bold');
             this.doc.text('Observações: ', metadataX, metadataY);
@@ -771,22 +813,64 @@ class PDFGenerator {
     /**
      * Add header for image pages (exactly as shown in screenshots)
      */
-    addImagePageHeader() {
+    async addImagePageHeader() {
         // Get configuration for header text
         const config = this.getPDFConfiguration();
         
-        // Add logo placeholders (as shown in screenshots)
-        // Left logo (UNICAMP)
-        this.doc.setDrawColor(150, 150, 150);
-        this.doc.setFillColor(240, 240, 240);
-        this.doc.rect(this.margin, 10, 20, 20, 'FD');
-        this.doc.setFontSize(6);
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.text('LOGO', this.margin + 10, 22, { align: 'center' });
+        // Add logo images with original proportions (as shown in screenshots)
+        const maxLogoHeight = 20; // Maximum height for image page logos
         
-        // Right logo (Environmental logo)
-        this.doc.rect(this.pageWidth - this.margin - 20, 10, 20, 20, 'FD');
-        this.doc.text('LOGO', this.pageWidth - this.margin - 10, 22, { align: 'center' });
+        try {
+            // Left logo (Logo_001.png)
+            const leftLogoInfo = await this.loadLogoImage('Logo_001.png');
+            
+            // Calculate dimensions to fit within max height while preserving aspect ratio
+            let leftLogoHeight = maxLogoHeight;
+            let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
+            
+            // If width exceeds reasonable bounds, scale down
+            if (leftLogoWidth > 30) {
+                leftLogoWidth = 30;
+                leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+            }
+            
+            this.doc.addImage(leftLogoInfo.dataURL, 'PNG', this.margin, 10, leftLogoWidth, leftLogoHeight);
+        } catch (error) {
+            console.error('Error loading left logo for image page:', error);
+            // Fallback to placeholder
+            this.doc.setDrawColor(150, 150, 150);
+            this.doc.setFillColor(240, 240, 240);
+            this.doc.rect(this.margin, 10, 20, 20, 'FD');
+            this.doc.setFontSize(6);
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.text('LOGO', this.margin + 10, 22, { align: 'center' });
+        }
+        
+        try {
+            // Right logo (Logo_002.png)
+            const rightLogoInfo = await this.loadLogoImage('Logo_002.png');
+            
+            // Calculate dimensions to fit within max height while preserving aspect ratio
+            let rightLogoHeight = maxLogoHeight;
+            let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
+            
+            // If width exceeds reasonable bounds, scale down
+            if (rightLogoWidth > 30) {
+                rightLogoWidth = 30;
+                rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+            }
+            
+            this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - this.margin - rightLogoWidth, 10, rightLogoWidth, rightLogoHeight);
+        } catch (error) {
+            console.error('Error loading right logo for image page:', error);
+            // Fallback to placeholder
+            this.doc.setDrawColor(150, 150, 150);
+            this.doc.setFillColor(240, 240, 240);
+            this.doc.rect(this.pageWidth - this.margin - 20, 10, 20, 20, 'FD');
+            this.doc.setFontSize(6);
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.text('LOGO', this.pageWidth - this.margin - 10, 22, { align: 'center' });
+        }
         
         // Header section (smaller than cover page, as shown in screenshots)
         this.doc.setFontSize(9);
@@ -834,6 +918,48 @@ class PDFGenerator {
         
         // Page number (as shown in screenshots: "Página 2 de 4")
         // Will be added later by fixPageNumbers()
+    }
+    
+    /**
+     * Load logo image from file path and return as data URL with original dimensions
+     */
+    async loadLogoImage(logoPath) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    // Create canvas to convert image to data URL
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set canvas dimensions to match original image (preserve aspect ratio)
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Draw image on canvas with original proportions
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Convert to data URL
+                    const dataURL = canvas.toDataURL('image/png');
+                    resolve({
+                        dataURL: dataURL,
+                        originalWidth: img.width,
+                        originalHeight: img.height,
+                        aspectRatio: img.width / img.height
+                    });
+                } catch (error) {
+                    console.error('Error converting logo to data URL:', error);
+                    reject(error);
+                }
+            };
+            img.onerror = () => {
+                console.error('Error loading logo image:', logoPath);
+                reject(new Error(`Failed to load logo: ${logoPath}`));
+            };
+            
+            // Load the image
+            img.src = logoPath;
+        });
     }
 }
 
