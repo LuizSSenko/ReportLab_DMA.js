@@ -5,6 +5,7 @@ class ImageGeoApp {
         this.imageProcessor = new ImageProcessor();
         this.mapManager = null;
         this.pdfGenerator = new PDFGenerator();
+        this.configManager = null; // Will be initialized after DOM is ready
         this.geojsonData = null;
         this.processedImages = [];
         this.selectedImageIndex = null;
@@ -18,7 +19,35 @@ class ImageGeoApp {
     initializeApp() {
         this.setupEventListeners();
         this.loadDefaultGeoJSON(); // Load map.geojson automatically
+        
+        // Initialize ConfigManager after all scripts are loaded
+        this.initializeConfigManager();
+        
         console.log('Image Geolocation Processor initialized');
+    }
+
+    /**
+     * Initialize ConfigManager with proper timing
+     */
+    initializeConfigManager() {
+        // Wait for DOM to be ready and ConfigManager to be available
+        const initConfig = () => {
+            if (typeof ConfigManager !== 'undefined') {
+                this.configManager = new ConfigManager(this);
+                console.log('ConfigManager initialized successfully');
+            } else {
+                console.warn('ConfigManager not loaded, retrying...');
+                // Retry after a short delay
+                setTimeout(initConfig, 100);
+            }
+        };
+
+        // Initialize immediately if DOM is ready, otherwise wait
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initConfig);
+        } else {
+            initConfig();
+        }
     }
 
     /**
@@ -75,9 +104,14 @@ class ImageGeoApp {
         // Configuration button
         const configBtn = document.getElementById('configBtn');
         if (configBtn) {
-            configBtn.addEventListener('click', () => {
+            configBtn.addEventListener('click', (e) => {
                 console.log('Config button clicked!');
-                this.showConfigDialog();
+                e.preventDefault(); // Prevent any default behavior
+                if (this.configManager) {
+                    this.configManager.showConfigDialog();
+                } else {
+                    console.error('ConfigManager not initialized');
+                }
             });
         } else {
             console.error('Config button not found!');
@@ -340,6 +374,7 @@ class ImageGeoApp {
                         // Simple point-in-polygon check using Turf.js
                         const point = turf.point([lng, lat]);
                         
+                        // First, check if point is inside any polygon
                         for (const feature of this.geojsonData.features) {
                             if (turf.booleanPointInPolygon(point, feature)) {
                                 return {
@@ -349,6 +384,60 @@ class ImageGeoApp {
                                     feature: feature
                                 };
                             }
+                        }
+                        
+                        // If not inside any polygon, find the nearest one by border distance
+                        let nearestFeature = null;
+                        let nearestDistance = Infinity;
+                        
+                        for (const feature of this.geojsonData.features) {
+                            try {
+                                // Calculate distance from point to polygon border/edge
+                                const distance = turf.pointToPolygon(point, feature, { units: 'kilometers' });
+                                
+                                if (distance < nearestDistance) {
+                                    nearestDistance = distance;
+                                    nearestFeature = feature;
+                                }
+                            } catch (error) {
+                                console.warn('Error calculating distance to polygon border:', error);
+                                // Alternative method: calculate distance to polygon boundary using nearestPointOnLine
+                                try {
+                                    let minDistanceToEdge = Infinity;
+                                    
+                                    // Get the polygon coordinates
+                                    const coords = feature.geometry.coordinates[0]; // Assuming first ring for exterior
+                                    
+                                    // Create line segments from polygon edges and find closest point on any edge
+                                    for (let i = 0; i < coords.length - 1; i++) {
+                                        const lineSegment = turf.lineString([coords[i], coords[i + 1]]);
+                                        const nearestPoint = turf.nearestPointOnLine(lineSegment, point);
+                                        const distanceToEdge = turf.distance(point, nearestPoint, { units: 'kilometers' });
+                                        
+                                        if (distanceToEdge < minDistanceToEdge) {
+                                            minDistanceToEdge = distanceToEdge;
+                                        }
+                                    }
+                                    
+                                    if (minDistanceToEdge < nearestDistance) {
+                                        nearestDistance = minDistanceToEdge;
+                                        nearestFeature = feature;
+                                    }
+                                } catch (edgeError) {
+                                    console.warn('Error calculating edge distance, skipping polygon:', edgeError);
+                                }
+                            }
+                        }
+                        
+                        if (nearestFeature) {
+                            const nearestName = nearestFeature.properties.Sigla || nearestFeature.properties.sigla || nearestFeature.properties.name || 'Unknown';
+                            return {
+                                status: `Outside region (nearest: ${nearestName})`,
+                                region: nearestFeature.properties.name || nearestFeature.properties.Sigla || nearestFeature.properties.sigla || 'Unknown Region',
+                                sigla: nearestFeature.properties.Sigla || nearestFeature.properties.sigla || null,
+                                feature: nearestFeature,
+                                distance: nearestDistance
+                            };
                         }
                         
                         return {
@@ -602,6 +691,7 @@ class ImageGeoApp {
             placeholder.style.display = 'flex';
             currentImage.style.display = 'none';
             imageDisplay.style.display = 'none';
+            this.hideCommentSection();
             return;
         }
 
@@ -635,23 +725,25 @@ class ImageGeoApp {
             detailsHTML += `
                 <div class="detail-row highlight">
                     <span class="detail-label">🔧 Status do trabalho:</span>
-                    <span class="detail-value work-status ${statusClass}">${image.workStatus}</span>
+                    <span class="detail-value work-status ${statusClass}" style="
+                        padding: 4px 8px; 
+                        border-radius: 4px; 
+                        font-weight: 500;
+                        ${image.workStatus === 'Concluído' ? 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;' : ''}
+                        ${image.workStatus === 'Parcial' ? 'background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;' : ''}
+                        ${image.workStatus === 'Não concluído' ? 'background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' : ''}
+                    ">${image.workStatus}</span>
                 </div>
             `;
         }
         
-        // Calculate new filename if image has Sigla
-        if (image.hasGPS && image.locationInfo && image.locationInfo.sigla) {
-            const fileIndex = String(this.selectedImageIndex + 1).padStart(3, '0');
-            const extension = this.getFileExtension(image.filename);
-            const newFilename = `${fileIndex} - ${image.locationInfo.sigla}${extension}`;
-            detailsHTML += `
-                <div class="detail-row highlight">
-                    <span class="detail-label">🏷️ New filename:</span>
-                    <span class="detail-value">${newFilename}</span>
-                </div>
-            `;
-        }
+        // Show original filename
+        detailsHTML += `
+            <div class="detail-row highlight">
+                <span class="detail-label">📄 Original Filename:</span>
+                <span class="detail-value">${image.filename}</span>
+            </div>
+        `;
 
         if (image.error) {
             detailsHTML += `
@@ -675,43 +767,18 @@ class ImageGeoApp {
                     <span class="detail-value">${AppUtils.formatDate(image.datetime) || 'Not available'}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">📷 Camera:</span>
-                    <span class="detail-value">${image.camera || 'Unknown'} ${image.model || ''}`.trim() + `</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">📁 Size:</span>
+                    <span class="detail-label"> Size:</span>
                     <span class="detail-value">${AppUtils.formatFileSize(image.size)}</span>
                 </div>
             `;
             
-            if (image.locationInfo) {
-                const statusClass = image.locationInfo.status === 'Inside region' ? 'status-inside' : 
-                                   image.locationInfo.status === 'Outside mapped regions' ? 'status-outside' : 'status-no-gps';
-                                   
+            if (image.locationInfo && image.locationInfo.sigla) {
                 detailsHTML += `
                     <div class="detail-row">
-                        <span class="detail-label">🗺️ Location Status:</span>
-                        <span class="detail-value location-status ${statusClass}">${image.locationInfo.status}</span>
+                        <span class="detail-label">🏷️ Sigla:</span>
+                        <span class="detail-value">${image.locationInfo.sigla}</span>
                     </div>
                 `;
-                
-                if (image.locationInfo.sigla) {
-                    detailsHTML += `
-                        <div class="detail-row">
-                            <span class="detail-label">🏷️ Sigla:</span>
-                            <span class="detail-value">${image.locationInfo.sigla}</span>
-                        </div>
-                    `;
-                }
-                
-                if (image.locationInfo.region && image.locationInfo.region !== image.locationInfo.sigla) {
-                    detailsHTML += `
-                        <div class="detail-row">
-                            <span class="detail-label">📍 Region:</span>
-                            <span class="detail-value">${image.locationInfo.region}</span>
-                        </div>
-                    `;
-                }
             }
         } else {
             detailsHTML += `
@@ -730,463 +797,122 @@ class ImageGeoApp {
         
         // Display map for images with GPS coordinates
         this.displayImageLocationMap(image);
+        
+        // Show and update comment section
+        this.showCommentSection(image);
     }
 
     /**
-     * Display map showing the location of the selected image
+     * Show comment section for the selected image
      */
-    displayImageLocationMap(image) {
-        console.log('=== DISPLAY IMAGE LOCATION MAP START ===');
-        console.log('displayImageLocationMap called for image:', image.filename);
-        console.log('Image has GPS:', image.hasGPS);
-        console.log('Image coordinates:', image.latitude, image.longitude);
+    showCommentSection(image) {
+        const commentSection = document.getElementById('commentSection');
+        const commentImageName = document.getElementById('commentImageName');
+        const imageComment = document.getElementById('imageComment');
+        const commentCounter = document.getElementById('commentCounter');
         
-        const mapContainer = document.getElementById('imageMapContainer');
-        const mapElement = document.getElementById('imageMap');
+        // Show the comment section
+        commentSection.style.display = 'block';
         
-        console.log('Map container found:', !!mapContainer);
-        console.log('Map element found:', !!mapElement);
+        // Update image name
+        commentImageName.textContent = image.filename;
         
-        if (!mapContainer || !mapElement) {
-            console.error('Map container or element not found in HTML!');
-            return;
+        // Initialize comment if not exists
+        if (!image.comments) {
+            image.comments = '';
         }
         
-        console.log('Map container found:', !!mapContainer);
-        console.log('Map element found:', !!mapElement);
-        console.log('Image has GPS:', image.hasGPS);
-        console.log('Image coordinates:', image.latitude, image.longitude);
-        console.log('Leaflet available:', typeof L !== 'undefined');
+        // Set current comment value
+        imageComment.value = image.comments;
         
-        if (!mapContainer || !mapElement) {
-            console.error('Map container or element not found');
-            return;
-        }
+        // Update counter
+        this.updateCommentCounter(image.comments.length);
         
-        // Check if image has valid GPS coordinates
-        let lat = image.latitude;
-        let lng = image.longitude;
-        let hasValidCoords = image.hasGPS && lat !== undefined && lng !== undefined && lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+        // Remove existing event listeners to prevent duplicates
+        const newComment = imageComment.cloneNode(true);
+        imageComment.parentNode.replaceChild(newComment, imageComment);
         
-        console.log('GPS validation check:');
-        console.log('- image.hasGPS:', image.hasGPS);
-        console.log('- lat:', lat, 'type:', typeof lat);
-        console.log('- lng:', lng, 'type:', typeof lng);
-        console.log('- hasValidCoords:', hasValidCoords);
+        // Add event listeners to new element
+        newComment.addEventListener('input', (e) => {
+            const currentLength = e.target.value.length;
+            
+            // Update counter
+            this.updateCommentCounter(currentLength);
+            
+            // Update image comment
+            image.comments = e.target.value;
+            
+            console.log(`Comment updated for image ${this.selectedImageIndex}: ${image.comments}`);
+        });
         
-        if (!hasValidCoords) {
-            console.log('Image has no valid GPS data, hiding map');
-            mapContainer.style.display = 'none';
-            return;
-        }
-        
-        console.log('Image has GPS coordinates, showing map');
-        console.log('Coordinates:', lat, lng);
-        
-        if (typeof L === 'undefined') {
-            console.error('Leaflet not loaded');
-            mapContainer.style.display = 'none';
-            return;
-        }
-        
-        // Show map container
-        mapContainer.style.display = 'block';
-        
-        // Clear existing map if any
-        mapElement.innerHTML = '';
-        
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-            try {
-                // Create new map centered on image location
-                const map = L.map('imageMap').setView([lat, lng], 15);
-                
-                // Add OpenStreetMap tile layer
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 18
-                }).addTo(map);
-                
-                // Add marker for image location (make it draggable)
-                const marker = L.marker([lat, lng], {
-                    draggable: true,
-                    title: 'Drag to update GPS coordinates'
-                }).addTo(map);
-                
-                // Handle marker drag events
-                marker.on('dragstart', () => {
-                    console.log('Marker drag started');
-                });
-                
-                marker.on('drag', (e) => {
-                    const newLatLng = e.target.getLatLng();
-                    console.log('Marker dragged to:', newLatLng.lat, newLatLng.lng);
-                });
-                
-                marker.on('dragend', (e) => {
-                    const newLatLng = e.target.getLatLng();
-                    console.log('Marker drag ended at:', newLatLng.lat, newLatLng.lng);
-                    
-                    // Update the image coordinates
-                    this.updateImageCoordinates(this.selectedImageIndex, newLatLng.lat, newLatLng.lng);
-                });
-                
-                // Create popup content
-                let popupContent = `
-                    <div class="map-popup">
-                        <h4>📷 ${image.filename}</h4>
-                        <p><strong>📍 Coordinates:</strong><br>
-                        ${AppUtils.formatCoordinates(lat, lng)}</p>
-                `;
-                
-                if (image.locationInfo && image.locationInfo.sigla) {
-                    popupContent += `<p><strong>🏷️ Sigla:</strong> ${image.locationInfo.sigla}</p>`;
-                }
-                
-                if (image.locationInfo && image.locationInfo.status) {
-                    popupContent += `<p><strong>🗺️ Status:</strong> ${image.locationInfo.status}</p>`;
-                }
-                
-                popupContent += `</div>`;
-                
-                marker.bindPopup(popupContent).openPopup();
-                
-                // Add GeoJSON regions if available
-                if (this.geojsonData && this.geojsonData.features) {
-                    console.log('Adding GeoJSON layer...');
-                    L.geoJSON(this.geojsonData, {
-                        style: (feature) => {
-                            // Highlight the region containing this image
-                            const isImageRegion = image.locationInfo && 
-                                                image.locationInfo.sigla && 
-                                                feature.properties.Sigla === image.locationInfo.sigla;
-                            
-                            return {
-                                color: isImageRegion ? '#ff6b6b' : '#667eea',
-                                weight: isImageRegion ? 3 : 2,
-                                opacity: isImageRegion ? 0.8 : 0.6,
-                                fillColor: isImageRegion ? '#ff6b6b' : '#667eea',
-                                fillOpacity: isImageRegion ? 0.3 : 0.1
-                            };
-                        },
-                        onEachFeature: (feature, layer) => {
-                            if (feature.properties.Sigla) {
-                                layer.bindTooltip(`Sigla: ${feature.properties.Sigla}`, {
-                                    permanent: false,
-                                    direction: 'center'
-                                });
-                            }
-                        }
-                    }).addTo(map);
-                }
-                
-                // Store map reference for cleanup
-                this.currentImageMap = map;
-                
-                console.log('Map created successfully');
-                
-                // Force map to invalidate size after a short delay
-                setTimeout(() => {
-                    map.invalidateSize();
-                    console.log('Map size invalidated');
-                }, 200);
-                
-            } catch (error) {
-                console.error('Error creating image location map:', error);
-                mapElement.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #718096;">
-                        <p>❌ Error loading map: ${error.message}</p>
-                    </div>
-                `;
-            }
-        }, 100);
+        newComment.addEventListener('blur', () => {
+            console.log('Comment field blurred, ensuring comment is saved');
+        });
     }
 
     /**
-     * Clean up the current image map
+     * Hide comment section
      */
-    cleanupImageMap() {
-        console.log('Cleaning up image map...');
-        if (this.currentImageMap) {
-            console.log('Removing previous image map');
-            this.currentImageMap.remove();
-            this.currentImageMap = null;
-        }
-        
-        // Also clear the map container content
-        const mapElement = document.getElementById('imageMap');
-        if (mapElement) {
-            console.log('Clearing map element content');
-            mapElement.innerHTML = '';
-        }
-        
-        // Hide map container by default - will be shown if image has GPS
-        const mapContainer = document.getElementById('imageMapContainer');
-        if (mapContainer) {
-            console.log('Hiding map container');
-            mapContainer.style.display = 'none';
-        }
+    hideCommentSection() {
+        const commentSection = document.getElementById('commentSection');
+        commentSection.style.display = 'none';
     }
 
     /**
-     * Update image GPS coordinates when marker is dragged
+     * Update comment character counter
      */
-    updateImageCoordinates(imageIndex, newLat, newLng) {
-        if (imageIndex < 0 || imageIndex >= this.processedImages.length) {
-            console.error('Invalid image index for coordinate update');
-            return;
-        }
+    updateCommentCounter(length) {
+        const commentCounter = document.getElementById('commentCounter');
+        commentCounter.textContent = `${length}/500`;
         
-        const image = this.processedImages[imageIndex];
-        const oldLat = image.latitude;
-        const oldLng = image.longitude;
-        
-        console.log(`Updating coordinates for image ${imageIndex}:`);
-        console.log(`  Old: ${oldLat}, ${oldLng}`);
-        console.log(`  New: ${newLat}, ${newLng}`);
-        
-        // Update the image coordinates
-        image.latitude = newLat;
-        image.longitude = newLng;
-        image.hasGPS = true; // Ensure GPS flag is set
-        
-        // Recalculate location information with new coordinates
-        if (this.geojsonData) {
-            const oldSigla = image.locationInfo?.sigla;
-            
-            // Analyze new location
-            image.locationInfo = this.mapManager.analyzePointLocation(newLat, newLng);
-            
-            const newSigla = image.locationInfo?.sigla;
-            
-            console.log(`Location analysis result:`);
-            console.log(`  Old Sigla: ${oldSigla}`);
-            console.log(`  New Sigla: ${newSigla}`);
-            console.log(`  Status: ${image.locationInfo?.status}`);
-            
-            // If Sigla changed, update the display
-            if (oldSigla !== newSigla) {
-                console.log('Sigla changed - updating image list and display');
-                
-                // Update the image list to reflect new filename
-                this.updateImageList();
-                
-                // Ensure the same image remains selected
-                this.selectedImageIndex = imageIndex;
-                
-                // Update the image display
-                this.displaySelectedImage();
-                
-                // Show notification about the change
-                this.showCoordinateUpdateNotification(imageIndex, oldSigla, newSigla);
-            } else {
-                // Just update the current display without rebuilding the list
-                this.displaySelectedImage();
-                
-                // Show notification about coordinate update
-                this.showCoordinateUpdateNotification(imageIndex, null, null, true);
-            }
+        // Add warning class if near limit
+        if (length > 450) {
+            commentCounter.classList.add('near-limit');
         } else {
-            // No GeoJSON data, just update the display
-            this.displaySelectedImage();
-            this.showCoordinateUpdateNotification(imageIndex, null, null, true);
+            commentCounter.classList.remove('near-limit');
         }
-    }
-    
-    /**
-     * Show notification when coordinates are updated
-     */
-    showCoordinateUpdateNotification(imageIndex, oldSigla, newSigla, coordsOnly = false) {
-        const image = this.processedImages[imageIndex];
-        
-        let message;
-        if (coordsOnly) {
-            message = `📍 GPS coordinates updated for image ${imageIndex + 1}\n` +
-                     `New coordinates: ${AppUtils.formatCoordinates(image.latitude, image.longitude)}`;
-        } else if (oldSigla && newSigla && oldSigla !== newSigla) {
-            message = `📍 Image location updated!\n` +
-                     `Old Sigla: ${oldSigla}\n` +
-                     `New Sigla: ${newSigla}\n` +
-                     `Coordinates: ${AppUtils.formatCoordinates(image.latitude, image.longitude)}`;
-        } else if (!oldSigla && newSigla) {
-            message = `📍 Image moved into mapped region!\n` +
-                     `New Sigla: ${newSigla}\n` +
-                     `Coordinates: ${AppUtils.formatCoordinates(image.latitude, image.longitude)}`;
-        } else if (oldSigla && !newSigla) {
-            message = `📍 Image moved outside mapped regions\n` +
-                     `Previous Sigla: ${oldSigla}\n` +
-                     `Coordinates: ${AppUtils.formatCoordinates(image.latitude, image.longitude)}`;
-        } else {
-            message = `📍 GPS coordinates updated\n` +
-                     `Coordinates: ${AppUtils.formatCoordinates(image.latitude, image.longitude)}`;
-        }
-        
-        // Create a temporary notification element
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 10000;
-            max-width: 300px;
-            font-size: 14px;
-            line-height: 1.4;
-            white-space: pre-line;
-        `;
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        // Remove notification after 4 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.transition = 'opacity 0.3s ease';
-                notification.style.opacity = '0';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
-            }
-        }, 4000);
-    }
-
-    /**
-     * Update statistics summary
-     */
-    updateStatsSummary() {
-        const statsSummary = document.getElementById('statsSummary');
-        const stats = this.imageProcessor.getStats();
-        
-        // Calculate work status statistics
-        const workStats = {
-            concluido: this.processedImages.filter(img => img.workStatus === 'Concluído').length,
-            parcial: this.processedImages.filter(img => img.workStatus === 'Parcial').length,
-            naoConcluido: this.processedImages.filter(img => img.workStatus === 'Não concluído').length
-        };
-        
-        statsSummary.innerHTML = `
-            <div class="stats-row">
-                <div class="stat-item">
-                    <span class="stat-number">${stats.total}</span>
-                    <span class="stat-label">Total</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">${stats.withGPS}</span>
-                    <span class="stat-label">With GPS</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">${stats.withoutGPS}</span>
-                    <span class="stat-label">No GPS</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">${stats.successRate}%</span>
-                    <span class="stat-label">Success Rate</span>
-                </div>
-            </div>
-            <div class="stats-row work-stats">
-                <div class="stat-item work-stat">
-                    <span class="stat-number concluido">${workStats.concluido}</span>
-                    <span class="stat-label">Concluído</span>
-                </div>
-                <div class="stat-item work-stat">
-                    <span class="stat-number parcial">${workStats.parcial}</span>
-                    <span class="stat-label">Parcial</span>
-                </div>
-                <div class="stat-item work-stat">
-                    <span class="stat-number nao-concluido">${workStats.naoConcluido}</span>
-                    <span class="stat-label">Não concluído</span>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Enable buttons on viewer page
-     */
-    enableButtons() {
-        const generatePDFBtn = document.getElementById('generatePDF');
-        
-        const selectedImages = this.processedImages.filter(img => img.imageSelected);
-        generatePDFBtn.disabled = selectedImages.length === 0;
-    }
-
-    /**
-     * Show loading overlay
-     */
-    showLoading(message = 'Processing...') {
-        const overlay = document.getElementById('loadingOverlay');
-        const text = overlay.querySelector('.loading-text');
-        text.textContent = message;
-        overlay.style.display = 'flex';
-    }
-
-    /**
-     * Hide loading overlay
-     */
-    hideLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.style.display = 'none';
-    }
-
-    /**
-     * Reset the application
-     */
-    reset() {
-        this.processedImages = [];
-        this.geojsonData = null;
-        this.imageProcessor.clear();
-        
-        if (this.mapManager) {
-            this.mapManager.clearImageMarkers();
-        }
-
-        // Clear UI
-        document.getElementById('imageInput').value = '';
-        document.getElementById('geojsonInput').value = '';
-        document.getElementById('imageInfo').textContent = '';
-        document.getElementById('geojsonInfo').textContent = '';
-        document.getElementById('imageResults').innerHTML = '';
-        document.getElementById('generatePDF').disabled = true;
-        
-        // Hide sections
-        AppUtils.hideStatus();
-        document.getElementById('resultsSection').style.display = 'none';
-    }
-
-    /**
-     * Export data as JSON
-     */
-    exportData() {
-        const data = {
-            timestamp: new Date().toISOString(),
-            geojsonData: this.geojsonData,
-            processedImages: this.processedImages,
-            stats: this.imageProcessor.getStats()
-        };
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `image-geolocation-data-${Date.now()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     }
 
     /**
      * Get file extension from filename
      */
     getFileExtension(filename) {
-        return filename.substring(filename.lastIndexOf('.'));
+        const lastDotIndex = filename.lastIndexOf('.');
+        return lastDotIndex !== -1 ? filename.substring(lastDotIndex) : '';
+    }
+
+    /**
+     * Show loading overlay with message
+     */
+    showLoading(message = 'Loading...') {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.querySelector('.loading-text');
+        
+        if (loadingText) {
+            loadingText.textContent = message;
+        }
+        
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Hide loading overlay
+     */
+    hideLoading() {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
+    }
+
+    /**
+     * Show error message to user
+     */
+    showError(message) {
+        alert(message); // Simple alert for now, could be enhanced with a better UI
     }
 
     /**
@@ -1200,518 +926,365 @@ class ImageGeoApp {
     }
 
     /**
+     * Generate PDF report
+     */
+    async generatePDFReport() {
+        try {
+            if (!this.processedImages || this.processedImages.length === 0) {
+                this.showError('No processed images available for PDF generation');
+                return;
+            }
+
+            // Show loading overlay
+            AppUtils.showLoading('Generating PDF report...');
+
+            // Generate location summary data
+            const locationSummary = this.generateLocationSummary();
+            console.log('Generated location summary:', locationSummary);
+
+            // Generate PDF using the PDF generator
+            const result = await this.pdfGenerator.generateReport(
+                this.processedImages, 
+                this.geojsonData, 
+                locationSummary // Pass the summary data instead of null
+            );
+
+            // Hide loading
+            AppUtils.hideLoading();
+
+            if (result.success) {
+                this.showSuccess(`PDF generated successfully: ${result.filename}`);
+            } else {
+                this.showError(`PDF generation failed: ${result.message}`);
+            }
+
+        } catch (error) {
+            AppUtils.hideLoading();
+            console.error('Error generating PDF:', error);
+            this.showError(`Error generating PDF: ${error.message}`);
+        }
+    }
+
+    /**
      * Show error message
      */
     showError(message) {
-        console.error('Error:', message);
-        alert(message); // Simple alert for now
+        const errorElement = AppUtils.createErrorMessage(message);
+        const container = document.getElementById('errorContainer') || document.body;
+        container.appendChild(errorElement);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (errorElement.parentNode) {
+                errorElement.parentNode.removeChild(errorElement);
+            }
+        }, 5000);
     }
 
     /**
      * Show success message
      */
     showSuccess(message) {
-        console.log('Success:', message);
-        alert(message); // Simple alert for now
-    }
-
-    /**
-     * Show message in the UI
-     */
-    showMessage(element) {
-        const container = document.querySelector('.container main') || document.body;
-        container.insertBefore(element, container.firstChild);
+        const successElement = AppUtils.createSuccessMessage(message);
+        const container = document.getElementById('successContainer') || document.body;
+        container.appendChild(successElement);
         
-        // Auto-remove after 5 seconds
+        // Auto-remove after 3 seconds
         setTimeout(() => {
-            if (element.parentNode) {
-                element.parentNode.removeChild(element);
-            }
-        }, 5000);
-    }
-
-    /**
-     * Generate PDF report for selected images
-     */
-    async generatePDFReport() {
-        const selectedImages = this.processedImages.filter(img => img.imageSelected);
-        
-        if (selectedImages.length === 0) {
-            this.showError('No selected images to include in the PDF report');
-            return;
-        }
-
-        try {
-            this.showLoading(`Generating PDF report for ${selectedImages.length} selected images...`);
-            
-            // Use the PDF generator
-            await this.pdfGenerator.generateReport(selectedImages, this.geojsonData);
-            
-            this.hideLoading();
-            // PDF generated silently - no success message
-        } catch (error) {
-            this.hideLoading();
-            console.error('Error generating PDF:', error);
-            this.showError(`Failed to generate PDF: ${error.message}`);
-        }
-    }
-
-    /**
-     * Show configuration dialog
-     */
-    showConfigDialog() {
-        console.log('showConfigDialog called!');
-        // Create modal backdrop
-        const modal = document.createElement('div');
-        modal.className = 'config-modal-backdrop';
-        modal.innerHTML = `
-            <div class="config-modal">
-                <div class="config-header">
-                    <h2>⚙️ Configurações</h2>
-                    <button class="config-close-btn" type="button">✕</button>
-                </div>
-                
-                <div class="config-tabs">
-                    <button class="config-tab-btn active" data-tab="pdf">📄 PDF</button>
-                    <button class="config-tab-btn" data-tab="questionario">📋 Questionário</button>
-                </div>
-                
-                <div class="config-content">
-                    <!-- PDF Configuration Tab -->
-                    <div class="config-tab-content active" data-tab="pdf">
-                        <div class="config-split">
-                            <div class="config-form">
-                                <h3>📄 Configuração da Capa</h3>
-                                <div class="config-section">
-                                    <label>Header 1:</label>
-                                    <input type="text" id="config-header1" value="DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE">
-                                    
-                                    <label>Header 2:</label>
-                                    <input type="text" id="config-header2" value="UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS">
-                                    
-                                    <label>Título:</label>
-                                    <input type="text" id="config-title" value="RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC">
-                                    
-                                    <label>Prefixo da Data:</label>
-                                    <input type="text" id="config-datePrefix" value="DATA DO RELATÓRIO:">
-                                    
-                                    <label>Número de Referência:</label>
-                                    <textarea id="config-referenceNumber" rows="2">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</textarea>
-                                    
-                                    <label>Descrição:</label>
-                                    <textarea id="config-description" rows="3">Vistoria de campo realizada pelos técnicos da DAV.</textarea>
-                                </div>
-                                
-                                <h3>📍 Informações de Rodapé</h3>
-                                <div class="config-section">
-                                    <label>Endereço:</label>
-                                    <input type="text" id="config-address" value="Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP">
-                                    
-                                    <label>CEP:</label>
-                                    <input type="text" id="config-postalCode" value="13083-877">
-                                    
-                                    <label>Telefone de Contato:</label>
-                                    <input type="text" id="config-contactPhone" value="mascard@unicamp.br">
-                                </div>
-                                
-                                <h3>✍️ Página Final - Assinaturas</h3>
-                                <div class="config-section">
-                                    <label>Assinatura 1:</label>
-                                    <input type="text" id="config-sign1" value="PREPOSTO CONTRATANTE">
-                                    
-                                    <label>Nome 1:</label>
-                                    <input type="text" id="config-sign1Name" value="sign1_name">
-                                    
-                                    <label>Assinatura 2:</label>
-                                    <input type="text" id="config-sign2" value="PREPOSTO CONTRATADA">
-                                    
-                                    <label>Nome 2:</label>
-                                    <input type="text" id="config-sign2Name" value="sign2_name">
-                                </div>
-                            </div>
-                            
-                            <div class="config-preview">
-                                <h4>👁️ Pré-visualização do PDF</h4>
-                                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
-                                    Visualização das páginas inicial e final do relatório em formato A4 paisagem
-                                </p>
-                                <div class="pdf-preview" id="pdfPreview">
-                                    <div class="preview-pages-container">
-                                        <!-- Cover Page Preview -->
-                                        <div>
-                                            <div class="preview-page-label">📄 Página 1 - Capa</div>
-                                            <div class="preview-page cover-page">
-                                                <div class="preview-header">
-                                                    <div class="preview-header1" id="preview-header1">DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE</div>
-                                                    <div class="preview-header2" id="preview-header2">UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS</div>
-                                                </div>
-                                                
-                                                <div class="preview-title" id="preview-title">RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC</div>
-                                                
-                                                <div class="preview-date-section">
-                                                    <span class="preview-date-prefix" id="preview-datePrefix">DATA DO RELATÓRIO:</span>
-                                                    <span class="preview-date">${new Date().toLocaleDateString('pt-BR')}</span>
-                                                </div>
-                                                
-                                                <div class="preview-reference" id="preview-referenceNumber">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</div>
-                                                
-                                                <div class="preview-description" id="preview-description">Vistoria de campo realizada pelos técnicos da DAV.</div>
-                                                
-                                                <div class="preview-footer">
-                                                    <div class="preview-address" id="preview-address">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</div>
-                                                    <div class="preview-postal">CEP: <span id="preview-postalCode">13083-877</span> - Tel: (19) 3521-7010 - Fax: (19) 3521-7635</div>
-                                                    <div class="preview-contact" id="preview-contactPhone">mascard@unicamp.br</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Signature Page Preview -->
-                                        <div>
-                                            <div class="preview-page-label">✍️ Página Final - Assinaturas</div>
-                                            <div class="preview-page signature-page">
-                                                <div class="signature-preview">
-                                                    <div class="signature-box">
-                                                        <div class="signature-label" id="preview-sign1">PREPOSTO CONTRATANTE</div>
-                                                        <div class="signature-line"></div>
-                                                        <div class="signature-name" id="preview-sign1Name">sign1_name</div>
-                                                        <div class="signature-date">Data: ......./......./...........</div>
-                                                    </div>
-                                                    <div class="signature-box">
-                                                        <div class="signature-label" id="preview-sign2">PREPOSTO CONTRATADA</div>
-                                                        <div class="signature-line"></div>
-                                                        <div class="signature-name" id="preview-sign2Name">sign2_name</div>
-                                                        <div class="signature-date">Data: ......./......./...........</div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="signature-location">
-                                                    <span id="preview-signature-address">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</span>, ${new Date().toLocaleDateString('pt-BR')}
-                                                </div>
-                                                
-                                                <div class="preview-footer">
-                                                    <div class="preview-address" id="preview-address-sig">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</div>
-                                                    <div class="preview-postal">CEP: <span id="preview-postalCode-sig">13083-877</span> - Tel: (19) 3521-7010 - Fax: (19) 3521-7635</div>
-                                                    <div class="preview-contact" id="preview-contactPhone-sig">mascard@unicamp.br</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Questionário Configuration Tab -->
-                    <div class="config-tab-content" data-tab="questionario">
-                        <div class="config-form">
-                            <h3>📋 Configuração do Questionário</h3>
-                            <div class="config-section">
-                                <p>⚠️ Esta funcionalidade será implementada em uma versão futura.</p>
-                                <p>Aqui você poderá configurar:</p>
-                                <ul>
-                                    <li>Perguntas personalizadas para cada imagem</li>
-                                    <li>Campos de observação</li>
-                                    <li>Critérios de avaliação</li>
-                                    <li>Templates de questionário</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="config-footer">
-                    <button class="config-btn config-btn-cancel" type="button">Cancelar</button>
-                    <button class="config-btn config-btn-save" type="button">💾 Salvar Configurações</button>
-                </div>
-            </div>
-        `;
-
-        // Add to body
-        document.body.appendChild(modal);
-
-        // Load current configuration
-        this.loadConfigurationIntoDialog();
-
-        // Setup event handlers
-        this.setupConfigDialogEvents(modal);
-
-        // Setup live preview updates
-        this.setupConfigPreviewUpdates();
-
-        // Show modal with animation
-        setTimeout(() => {
-            modal.style.opacity = '1';
-        }, 10);
-    }
-
-    /**
-     * Load current configuration into dialog
-     */
-    loadConfigurationIntoDialog() {
-        const config = this.getPDFConfiguration();
-        
-        // Load values into form fields
-        const fields = [
-            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
-            'description', 'address', 'postalCode', 'contactPhone',
-            'sign1', 'sign1Name', 'sign2', 'sign2Name'
-        ];
-
-        fields.forEach(field => {
-            const element = document.getElementById(`config-${field}`);
-            if (element && config[field] !== undefined) {
-                element.value = config[field];
-            }
-        });
-
-        // Update preview
-        this.updateConfigPreview();
-    }
-
-    /**
-     * Setup event handlers for config dialog
-     */
-    setupConfigDialogEvents(modal) {
-        // Close button
-        modal.querySelector('.config-close-btn').addEventListener('click', () => {
-            this.closeConfigDialog(modal);
-        });
-
-        // Cancel button
-        modal.querySelector('.config-btn-cancel').addEventListener('click', () => {
-            this.closeConfigDialog(modal);
-        });
-
-        // Save button
-        modal.querySelector('.config-btn-save').addEventListener('click', () => {
-            this.saveConfiguration(modal);
-        });
-
-        // Tab switching
-        modal.querySelectorAll('.config-tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.switchConfigTab(btn.dataset.tab);
-            });
-        });
-
-        // Close on backdrop click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeConfigDialog(modal);
-            }
-        });
-
-        // Prevent modal content clicks from closing modal
-        modal.querySelector('.config-modal').addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    /**
-     * Setup live preview updates
-     */
-    setupConfigPreviewUpdates() {
-        const fields = [
-            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
-            'description', 'address', 'postalCode', 'contactPhone',
-            'sign1', 'sign1Name', 'sign2', 'sign2Name'
-        ];
-
-        fields.forEach(field => {
-            const element = document.getElementById(`config-${field}`);
-            if (element) {
-                element.addEventListener('input', () => {
-                    this.updateConfigPreview();
-                });
-            }
-        });
-    }
-
-    /**
-     * Update configuration preview for both cover and signature pages
-     */
-    updateConfigPreview() {
-        // Cover page fields
-        const coverFields = [
-            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
-            'description', 'address', 'postalCode', 'contactPhone'
-        ];
-
-        coverFields.forEach(field => {
-            const inputElement = document.getElementById(`config-${field}`);
-            const previewElement = document.getElementById(`preview-${field}`);
-            
-            if (inputElement && previewElement) {
-                previewElement.textContent = inputElement.value;
-            }
-        });
-
-        // Signature page fields
-        const signatureFields = ['sign1', 'sign1Name', 'sign2', 'sign2Name'];
-        
-        signatureFields.forEach(field => {
-            const inputElement = document.getElementById(`config-${field}`);
-            const previewElement = document.getElementById(`preview-${field}`);
-            
-            if (inputElement && previewElement) {
-                previewElement.textContent = inputElement.value;
-            }
-        });
-
-        // Update signature page footer elements (they have different IDs)
-        const addressElement = document.getElementById('config-address');
-        const postalElement = document.getElementById('config-postalCode');
-        const contactElement = document.getElementById('config-contactPhone');
-
-        if (addressElement) {
-            const sigAddressElement = document.getElementById('preview-address-sig');
-            const sigLocationElement = document.getElementById('preview-signature-address');
-            if (sigAddressElement) sigAddressElement.textContent = addressElement.value;
-            if (sigLocationElement) sigLocationElement.textContent = addressElement.value;
-        }
-
-        if (postalElement) {
-            const sigPostalElement = document.getElementById('preview-postalCode-sig');
-            if (sigPostalElement) sigPostalElement.textContent = postalElement.value;
-        }
-
-        if (contactElement) {
-            const sigContactElement = document.getElementById('preview-contactPhone-sig');
-            if (sigContactElement) sigContactElement.textContent = contactElement.value;
-        }
-    }
-
-    /**
-     * Switch configuration tab
-     */
-    switchConfigTab(tabName) {
-        // Update tab buttons
-        document.querySelectorAll('.config-tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`.config-tab-btn[data-tab="${tabName}"]`).classList.add('active');
-
-        // Update tab content
-        document.querySelectorAll('.config-tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.querySelector(`.config-tab-content[data-tab="${tabName}"]`).classList.add('active');
-    }
-
-    /**
-     * Save configuration
-     */
-    saveConfiguration(modal) {
-        const config = {};
-        
-        const fields = [
-            'header1', 'header2', 'title', 'datePrefix', 'referenceNumber',
-            'description', 'address', 'postalCode', 'contactPhone',
-            'sign1', 'sign1Name', 'sign2', 'sign2Name'
-        ];
-
-        fields.forEach(field => {
-            const element = document.getElementById(`config-${field}`);
-            if (element) {
-                config[field] = element.value;
-            }
-        });
-
-        // Save to localStorage
-        localStorage.setItem('pdfConfiguration', JSON.stringify(config));
-
-        // Close modal
-        this.closeConfigDialog(modal);
-
-        // Show success notification
-        this.showConfigSavedNotification();
-    }
-
-    /**
-     * Close configuration dialog
-     */
-    closeConfigDialog(modal) {
-        modal.style.opacity = '0';
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.parentNode.removeChild(modal);
-            }
-        }, 300);
-    }
-
-    /**
-     * Get PDF configuration (used by PDF generator)
-     */
-    getPDFConfiguration() {
-        // Try to get from localStorage
-        const savedConfig = localStorage.getItem('pdfConfiguration');
-        if (savedConfig) {
-            try {
-                return JSON.parse(savedConfig);
-            } catch (error) {
-                console.error('Error parsing saved configuration:', error);
-            }
-        }
-        
-        // Return default configuration
-        return {
-            header1: 'DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE',
-            header2: 'UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS',
-            title: 'RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC',
-            datePrefix: 'DATA DO RELATÓRIO:',
-            referenceNumber: 'CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA',
-            description: 'Vistoria de campo realizada pelos técnicos da DAV.',
-            address: 'Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP',
-            postalCode: '13083-877',
-            contactPhone: 'mascard@unicamp.br',
-            sign1: 'PREPOSTO CONTRATANTE',
-            sign1Name: 'sign1_name',
-            sign2: 'PREPOSTO CONTRATADA',
-            sign2Name: 'sign2_name'
-        };
-    }
-
-    /**
-     * Show configuration saved notification
-     */
-    showConfigSavedNotification() {
-        const notification = document.createElement('div');
-        notification.className = 'config-notification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 10000;
-            font-weight: 500;
-        `;
-        
-        notification.textContent = '💾 Configurações salvas com sucesso!';
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.transition = 'opacity 0.3s ease';
-                notification.style.opacity = '0';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
+            if (successElement.parentNode) {
+                successElement.parentNode.removeChild(successElement);
             }
         }, 3000);
     }
+
+    /**
+     * Enable buttons after images are processed
+     */
+    enableButtons() {
+        const processBtn = document.getElementById('processBtn');
+        const generatePDFBtn = document.getElementById('generatePDF');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const selectNoneBtn = document.getElementById('selectNoneBtn');
+        
+        if (processBtn) {
+            processBtn.disabled = false;
+        }
+        
+        if (generatePDFBtn) {
+            generatePDFBtn.disabled = false;
+        }
+        
+        if (selectAllBtn) {
+            selectAllBtn.disabled = false;
+            selectAllBtn.addEventListener('click', () => {
+                this.selectAllImages();
+            });
+        }
+        
+        if (selectNoneBtn) {
+            selectNoneBtn.disabled = false;
+            selectNoneBtn.addEventListener('click', () => {
+                this.selectNoneImages();
+            });
+        }
+    }
+
+    /**
+     * Select all images
+     */
+    selectAllImages() {
+        this.processedImages.forEach(image => {
+            image.imageSelected = true;
+        });
+        this.updateImageList();
+    }
+
+    /**
+     * Select none images
+     */
+    selectNoneImages() {
+        this.processedImages.forEach(image => {
+            image.imageSelected = false;
+        });
+        this.updateImageList();
+    }
+
+    /**
+     * Display image location map
+     */
+    displayImageLocationMap(image) {
+        const mapContainer = document.getElementById('imageMapContainer');
+        const mapElement = document.getElementById('imageMap');
+        
+        if (!image.hasGPS || !image.latitude || !image.longitude) {
+            if (mapContainer) {
+                mapContainer.style.display = 'none';
+            }
+            return;
+        }
+        
+        if (mapContainer) {
+            mapContainer.style.display = 'block';
+        }
+        
+        if (mapElement) {
+            // Clean up previous map
+            this.cleanupImageMap();
+            
+            // Create new map
+            this.currentImageMap = L.map('imageMap').setView([image.latitude, image.longitude], 15);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(this.currentImageMap);
+            
+            // Add GeoJSON polygons if available
+            if (this.geojsonData) {
+                L.geoJSON(this.geojsonData, {
+                    style: {
+                        color: '#667eea',
+                        weight: 2,
+                        opacity: 0.8,
+                        fillColor: '#667eea',
+                        fillOpacity: 0.1
+                    },
+                    onEachFeature: (feature, layer) => {
+                        // Add popup to each polygon showing region info
+                        if (feature.properties) {
+                            const regionName = feature.properties.name || feature.properties.Name || 'Unknown Region';
+                            const sigla = feature.properties.Sigla || feature.properties.sigla || 'No Sigla';
+                            layer.bindPopup(`
+                                <strong>Region:</strong> ${regionName}<br>
+                                <strong>Sigla:</strong> ${sigla}
+                            `);
+                        }
+                    }
+                }).addTo(this.currentImageMap);
+            }
+            
+            // Calculate display name (same logic as in image list)
+            let displayName = image.filename;
+            if (image.hasGPS && image.locationInfo && image.locationInfo.sigla) {
+                const fileIndex = String(this.selectedImageIndex + 1).padStart(3, '0');
+                const extension = this.getFileExtension(image.filename);
+                displayName = `${fileIndex} - ${image.locationInfo.sigla}${extension}`;
+            }
+            
+            // Add marker for image location with enhanced popup
+            const marker = L.marker([image.latitude, image.longitude], {
+                draggable: true
+            }).addTo(this.currentImageMap);
+            
+            // Create popup content
+            let popupContent = `<strong>${displayName}</strong><br>`;
+            popupContent += `<strong>Coordinates:</strong> ${image.latitude.toFixed(6)}, ${image.longitude.toFixed(6)}<br>`;
+            
+            if (image.locationInfo) {
+                if (image.locationInfo.sigla) {
+                    popupContent += `<strong>Sigla:</strong> ${image.locationInfo.sigla}<br>`;
+                }
+                popupContent += `<strong>Status:</strong> ${image.locationInfo.status}`;
+            }
+            
+            marker.bindPopup(popupContent).openPopup();
+            
+            // Handle marker drag events
+            marker.on('dragstart', (e) => {
+                console.log('Marker drag started');
+            });
+            
+            marker.on('drag', (e) => {
+                const currentLatLng = e.target.getLatLng();
+                console.log('Marker being dragged to:', currentLatLng.lat.toFixed(6), currentLatLng.lng.toFixed(6));
+            });
+            
+            marker.on('dragend', (e) => {
+                console.log('Marker drag ended');
+                const newLatLng = e.target.getLatLng();
+                console.log('Final position:', newLatLng.lat.toFixed(6), newLatLng.lng.toFixed(6));
+                
+                // Update image coordinates
+                image.latitude = newLatLng.lat;
+                image.longitude = newLatLng.lng;
+                
+                // Re-analyze location with new coordinates
+                if (this.geojsonData && this.mapManager) {
+                    image.locationInfo = this.mapManager.analyzePointLocation(
+                        image.latitude, 
+                        image.longitude
+                    );
+                    console.log('New location analysis:', image.locationInfo);
+                }
+                
+                // Recalculate display name with new sigla information
+                let newDisplayName = image.filename;
+                if (image.hasGPS && image.locationInfo && image.locationInfo.sigla) {
+                    const fileIndex = String(this.selectedImageIndex + 1).padStart(3, '0');
+                    const extension = this.getFileExtension(image.filename);
+                    newDisplayName = `${fileIndex} - ${image.locationInfo.sigla}${extension}`;
+                }
+                
+                // Update marker popup with new information
+                let newPopupContent = `<strong>${newDisplayName}</strong><br>`;
+                newPopupContent += `<strong>Coordinates:</strong> ${image.latitude.toFixed(6)}, ${image.longitude.toFixed(6)}<br>`;
+                
+                if (image.locationInfo) {
+                    if (image.locationInfo.sigla) {
+                        newPopupContent += `<strong>Sigla:</strong> ${image.locationInfo.sigla}<br>`;
+                    }
+                    newPopupContent += `<strong>Status:</strong> ${image.locationInfo.status}`;
+                }
+                
+                marker.setPopupContent(newPopupContent);
+                
+                // Update the image details display
+                this.displaySelectedImage();
+                
+                // Update the image list to reflect new filename if sigla changed
+                this.updateImageList();
+                
+                console.log(`Image ${this.selectedImageIndex} position updated to: ${image.latitude.toFixed(6)}, ${image.longitude.toFixed(6)}`);
+                console.log('New location info:', image.locationInfo);
+            });
+        }
+    }
+
+    /**
+     * Clean up image map
+     */
+    cleanupImageMap() {
+        if (this.currentImageMap) {
+            this.currentImageMap.remove();
+            this.currentImageMap = null;
+        }
+    }
+
+    /**
+     * Generate summary data for Quadras and Canteiros
+     */
+    generateLocationSummary() {
+        const quadraSummary = new Map();
+        const canteiroSummary = new Map();
+
+        // Process each image with GPS and location info
+        this.processedImages.forEach(image => {
+            if (image.hasGPS && image.locationInfo && image.locationInfo.sigla && image.locationInfo.feature) {
+                const properties = image.locationInfo.feature.properties;
+                const sigla = image.locationInfo.sigla;
+                const status = image.workStatus || 'Não concluído';
+
+                // Check if this location has Quadra information
+                if (properties.Quadra || properties.quadra) {
+                    const quadraNumber = properties.Quadra || properties.quadra;
+                    const key = `${quadraNumber}-${sigla}`;
+                    
+                    if (!quadraSummary.has(key)) {
+                        quadraSummary.set(key, {
+                            quadra: quadraNumber,
+                            sigla: sigla,
+                            status: status,
+                            images: []
+                        });
+                    } else {
+                        // Update status based on priority: Concluído > Parcial > Não concluído
+                        const existing = quadraSummary.get(key);
+                        if (status === 'Concluído' || (status === 'Parcial' && existing.status === 'Não concluído')) {
+                            existing.status = status;
+                        }
+                    }
+                    quadraSummary.get(key).images.push(image);
+                }
+
+                // Check if this location has Canteiro information
+                if (properties.Canteiro || properties.canteiro) {
+                    const canteiroNumber = properties.Canteiro || properties.canteiro;
+                    const key = `${canteiroNumber}-${sigla}`;
+                    
+                    if (!canteiroSummary.has(key)) {
+                        canteiroSummary.set(key, {
+                            canteiro: canteiroNumber,
+                            sigla: sigla,
+                            status: status,
+                            images: []
+                        });
+                    } else {
+                        // Update status based on priority: Concluído > Parcial > Não concluído
+                        const existing = canteiroSummary.get(key);
+                        if (status === 'Concluído' || (status === 'Parcial' && existing.status === 'Não concluído')) {
+                            existing.status = status;
+                        }
+                    }
+                    canteiroSummary.get(key).images.push(image);
+                }
+            }
+        });
+
+        // Convert Maps to sorted arrays
+        const quadraData = Array.from(quadraSummary.values()).sort((a, b) => {
+            // Sort by quadra number first, then by sigla
+            if (a.quadra !== b.quadra) {
+                return String(a.quadra).localeCompare(String(b.quadra), undefined, { numeric: true });
+            }
+            return a.sigla.localeCompare(b.sigla);
+        });
+
+        const canteiroData = Array.from(canteiroSummary.values()).sort((a, b) => {
+            // Sort by canteiro number first, then by sigla
+            if (a.canteiro !== b.canteiro) {
+                return String(a.canteiro).localeCompare(String(b.canteiro), undefined, { numeric: true });
+            }
+            return a.sigla.localeCompare(b.sigla);
+        });
+
+        return {
+            quadras: quadraData,
+            canteiros: canteiroData
+        };
+    }
 }
 
-// Initialize the application when the DOM is loaded
+// Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new ImageGeoApp();
 });
-
-// Export for potential external use
-window.ImageGeoApp = ImageGeoApp;

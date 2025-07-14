@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Logo Removal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Logo Upload Removal</h1>
+        <p>This test verifies that all logo upload functionality has been removed from the application.</p>
+        
+        <div id="test-results"></div>
+        
+        <button onclick="runTests()">Run Tests</button>
+        <button onclick="openOriginalApp()">Open Original App</button>
+    </div>
+
+    <script>
+        function runTests() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '';
+            
+            const tests = [
+                {
+                    name: 'Logo upload methods removed from app.js',
+                    test: () => {
+                        // Check if logo upload methods are not defined
+                        const hasSetupLogoUpload = typeof window.app?.setupLogoUpload === 'function';
+                        const hasUpdateLogoPreview = typeof window.app?.updateLogoPreview === 'function';
+                        const hasClearLogoPreview = typeof window.app?.clearLogoPreview === 'function';
+                        const hasGetLogoData = typeof window.app?.getLogoData === 'function';
+                        const hasClearLogoData = typeof window.app?.clearLogoData === 'function';
+                        
+                        return !hasSetupLogoUpload && !hasUpdateLogoPreview && !hasClearLogoPreview && !hasGetLogoData && !hasClearLogoData;
+                    }
+                },
+                {
+                    name: 'Logo upload elements not present in HTML',
+                    test: () => {
+                        const logoUploadInputs = document.querySelectorAll('input[type="file"][id*="logo"]');
+                        const logoClearButtons = document.querySelectorAll('button[id*="clearLogo"]');
+                        const logoUploadSections = document.querySelectorAll('.logo-upload-section');
+                        
+                        return logoUploadInputs.length === 0 && logoClearButtons.length === 0 && logoUploadSections.length === 0;
+                    }
+                },
+                {
+                    name: 'Logo containers show static placeholders',
+                    test: () => {
+                        const logoContainers = document.querySelectorAll('.logo-container');
+                        const placeholderTexts = document.querySelectorAll('.logo-placeholder-text');
+                        
+                        return logoContainers.length > 0 && placeholderTexts.length > 0;
+                    }
+                },
+                {
+                    name: 'PDF configuration does not include logo data',
+                    test: () => {
+                        if (window.app && typeof window.app.getPDFConfiguration === 'function') {
+                            const config = window.app.getPDFConfiguration();
+                            return !config.hasOwnProperty('logoData');
+                        }
+                        return true; // Pass if app not loaded yet
+                    }
+                }
+            ];
+            
+            tests.forEach(test => {
+                const result = document.createElement('div');
+                result.className = 'test-result';
+                
+                try {
+                    const passed = test.test();
+                    result.className += passed ? ' pass' : ' fail';
+                    result.innerHTML = `
+                        <strong>${passed ? '✅' : '❌'} ${test.name}</strong>
+                        <br>Status: ${passed ? 'PASS' : 'FAIL'}
+                    `;
+                } catch (error) {
+                    result.className += ' fail';
+                    result.innerHTML = `
+                        <strong>❌ ${test.name}</strong>
+                        <br>Status: ERROR - ${error.message}
+                    `;
+                }
+                
+                results.appendChild(result);
+            });
+        }
+        
+        function openOriginalApp() {
+            window.open('index.html', '_blank');
+        }
+        
+        // Run tests automatically when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>

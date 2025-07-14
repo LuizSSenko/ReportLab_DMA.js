@@ -2,7 +2,7 @@
 
 .viewer-header {
     background: white;
-    padding: 1rem 2rem;
+    padding: 0.1rem 1.5rem; /* Further reduced padding */
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: space-between;
@@ -10,28 +10,34 @@
     position: sticky;
     top: 0;
     z-index: 100;
+    min-height: 40px; /* Set a minimum height to keep it compact */
+    border-radius: 0 !important; /* Force rectangular header */
 }
 
 .header-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem; /* Reduced gap between back button and title */
 }
 
 .header-left h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem; /* Reduced from 1.5rem */
     color: #2d3748;
     margin: 0;
 }
 
 .header-right {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem; /* Reduced gap between buttons */
 }
 
 .viewer-main {
     display: flex;
-    height: calc(100vh - 80px);
+    position: absolute;
+    top: 48px; /* Position with 8px gap from 40px header for visual separation */
+    bottom: 0;
+    left: 0;
+    right: 0;
     background: #f8fafc;
 }
 
@@ -42,11 +48,11 @@
     border-right: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 100px); /* Set fixed height to match right panel */
+    height: 100%; /* Fill the viewer-main container */
 }
 
 .panel-header {
-    padding: 1rem;
+    padding: 0.5rem 1rem; /* Reduced vertical padding from 1rem to 0.5rem */
     border-bottom: 1px solid #e2e8f0;
     background: #f8fafc;
     display: flex;
@@ -170,30 +176,46 @@
     justify-content: center;
     font-size: 11px; /* Reduced from 12px */
     font-weight: bold;
-    border: 2px solid transparent;
+    border: none;
     transition: all 0.2s ease;
-    opacity: 0.3; /* Fade inactive radio buttons by default */
+    opacity: 0.6; /* Slightly more visible than before */
+    filter: grayscale(100%); /* Make inactive radio buttons gray */
 }
 
 .status-dot.concluido {
-    background: #c6f6d5;
-    color: #22543d;
+    background: #10b981;
+    color: white;
 }
 
 .status-dot.parcial {
-    background: #feebc8;
-    color: #c05621;
+    background: #f59e0b;
+    color: white;
 }
 
 .status-dot.nao-concluido {
-    background: #fed7d7;
-    color: #742a2a;
+    background: #ef4444;
+    color: white;
 }
 
 .status-option-inline input[type="radio"]:checked + .status-dot {
-    border-color: #667eea;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    border-color: #1f2937;
+    box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.3);
     opacity: 1; /* Make the active radio button fully visible */
+    transform: scale(1.1);
+    filter: grayscale(0%); /* Remove grayscale from selected radio buttons */
+}
+
+/* Hover effects for better interactivity */
+.status-option-inline:hover .status-dot {
+    opacity: 0.8;
+    transform: scale(1.05);
+    filter: grayscale(30%); /* Partially desaturate on hover */
+}
+
+.status-option-inline:hover input[type="radio"]:checked + .status-dot {
+    opacity: 1;
+    transform: scale(1.15);
+    filter: grayscale(0%); /* Keep selected buttons fully colored on hover */
 }
 
 .image-item-header {
@@ -236,11 +258,11 @@
     display: flex;
     flex-direction: column;
     background: white;
-    margin: 1rem;
+    margin: 0 1rem 1rem 0; /* Keep existing margins except top */
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    height: calc(100vh - 100px); /* Set fixed height */
+    height: calc(100% - 1rem); /* Fill container minus bottom margin */
 }
 
 .image-viewer {
@@ -309,4 +331,75 @@
 .detail-value {
     color: #2d3748;
     text-align: right;
+}
+
+/* Comment Section Styles */
+.comment-section {
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem;
+    background: #f8fafc;
+    margin-top: auto; /* Push to bottom */
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.comment-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.comment-image-name {
+    font-size: 0.8rem;
+    color: #718096;
+    font-weight: 500;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.comment-input-container {
+    position: relative;
+}
+
+.comment-section textarea {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.comment-section textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.comment-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #a0aec0;
+    margin-top: 0.25rem;
+}
+
+.comment-counter.near-limit {
+    color: #f56565;
+}
+
+/* Adjust left panel height to accommodate comment section */
+.left-panel .image-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
 }

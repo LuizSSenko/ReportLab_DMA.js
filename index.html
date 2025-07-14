@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,6 +17,7 @@
     <link rel="stylesheet" href="viewer-page.css">
     <link rel="stylesheet" href="map.css">
     <link rel="stylesheet" href="config-modal.css">
+    <link rel="stylesheet" href="css/configManager.css">
     <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
@@ -67,7 +66,7 @@
         <header class="viewer-header">
             <div class="header-left">
                 <button id="backButton" class="btn btn-back">← Back</button>
-                <h1>📍 Image Analysis Results</h1>
+                <h1>ReportLab</h1>
             </div>
             <div class="header-right">
                 <button id="configBtn" class="btn btn-secondary">
@@ -91,6 +90,28 @@
                 </div>
                 <div class="image-list" id="imageList">
                     <!-- Image items will be dynamically populated -->
+                </div>
+                
+                <!-- Comment section for selected image -->
+                <div class="comment-section" id="commentSection" style="display: none;">
+                    <div class="comment-header">
+                        <h4>💬 Comentários</h4>
+                        <span class="comment-image-name" id="commentImageName"></span>
+                    </div>
+                    <div class="comment-input-container">
+                        <textarea id="imageComment" 
+                                  placeholder="Adicione comentários ou observações sobre esta imagem..."
+                                  rows="3"
+                                  maxlength="500"></textarea>
+                        <div class="comment-footer">
+                            <div class="comment-counter">
+                                <span id="commentCounter">0/500</span>
+                            </div>
+                            <div class="macro-hint">
+                                <span>💡 Use as teclas 1-9 para macros rápidos</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -134,143 +155,183 @@
             <div class="modal-body">
                 <div class="config-tabs">
                     <button class="tab-btn active" data-tab="pdf">📄 PDF</button>
+                    <button class="tab-btn" data-tab="macros">⌨️ Macros</button>
                     <button class="tab-btn" data-tab="questionnaire">📋 Questionário</button>
                 </div>
                 
                 <div class="tab-content active" id="pdfTab">
-                    <div class="config-section">
-                        <h3>📋 Configuração da Capa</h3>
-                        
-                        <div class="form-group">
-                            <label>Header 1:</label>
-                            <input type="text" id="header1" value="DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Header 2:</label>
-                            <input type="text" id="header2" value="UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Título:</label>
-                            <input type="text" id="title" value="RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Prefixo da Data:</label>
-                            <input type="text" id="datePrefix" value="DATA DO RELATÓRIO:">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Número de Referência:</label>
-                            <textarea id="referenceNumber">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Descrição:</label>
-                            <textarea id="description">Vistoria de campo realizada pelos técnicos da DAV.</textarea>
-                        </div>
-                        
-                        <h3>📍 Informações de Rodapé</h3>
-                        
-                        <div class="form-group">
-                            <label>Endereço:</label>
-                            <input type="text" id="address" value="Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>CEP:</label>
-                            <input type="text" id="postalCode" value="13083-877">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>E-mail:</label>
-                            <input type="text" id="contactPhone" value="mascard@unicamp.br">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Assinatura 1:</label>
-                            <input type="text" id="sign1" value="PREPOSTO CONTRATANTE">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Nome Assinatura 1:</label>
-                            <input type="text" id="sign1Name" value="">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Assinatura 2:</label>
-                            <input type="text" id="sign2" value="PREPOSTO CONTRATADA">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Nome Assinatura 2:</label>
-                            <input type="text" id="sign2Name" value="">
-                        </div>
-                    </div>
-                    
-                    <div class="preview-section">
-                        <h3>🔍 Pré-visualização da Capa</h3>
-                        <div class="preview-container">
-                            <div class="preview-page">
-                                <div class="preview-page-content">
-                                    <div class="preview-header">
-                                        <div class="logo-placeholder logo-left">LOGO</div>
-                                        <div class="logo-placeholder logo-right">LOGO</div>
-                                        <h1 id="previewHeader1">DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE</h1>
-                                        <h2 id="previewHeader2">UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS</h2>
-                                        <div class="preview-title" id="previewTitle">RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC</div>
-                                    </div>
-                                    
-                                    <div class="preview-content">
-                                        <p><strong id="previewDatePrefix">DATA DO RELATÓRIO:</strong> <span id="previewDate"></span></p>
-                                        <p id="previewReference">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</p>
-                                        <p id="previewDescription">Vistoria de campo realizada pelos técnicos da DAV.</p>
-                                    </div>
-                                    
-                                    <div class="preview-footer">
-                                        <p id="previewAddress">Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP</p>
-                                        <p>CEP: <span id="previewPostalCode">13083-877</span> - Tel: (19) 3521-7010 - Fax: (19) 3521-7635</p>
-                                        <p id="previewContactPhone">mascard@unicamp.br</p>
-                                    </div>
+                    <div class="config-split">
+                        <!-- Left Column - Configuration Form -->
+                        <div class="config-form-section">
+                            
+                            <div class="config-section">
+                                <h3>📋 Configuração da Capa</h3>
+                                
+                                <div class="form-group">
+                                    <label>Header 1:</label>
+                                    <input type="text" id="header1" value="DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Header 2:</label>
+                                    <input type="text" id="header2" value="UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" id="title" value="RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Prefixo da Data:</label>
+                                    <input type="text" id="datePrefix" value="DATA DO RELATÓRIO:">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Número de Referência:</label>
+                                    <textarea id="referenceNumber">CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA</textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Descrição:</label>
+                                    <textarea id="description">Vistoria de campo realizada pelos técnicos da DAV.</textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="config-section">
+                                <h3>📍 Informações de Rodapé</h3>
+                                
+                                <div class="form-group">
+                                    <label>Endereço:</label>
+                                    <input type="text" id="address" value="Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>CEP:</label>
+                                    <input type="text" id="postalCode" value="13083-877">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>E-mail:</label>
+                                    <input type="text" id="contactPhone" value="mascard@unicamp.br">
                                 </div>
                             </div>
                         </div>
                         
-                        <h3>✍️ Pré-visualização das Assinaturas</h3>
-                        <div class="preview-container">
-                            <div class="preview-page">
-                                <div class="preview-page-content">
-                                    <div class="signature-preview">
-                                        <div class="signature-box">
-                                            <h3 id="previewSign1">PREPOSTO CONTRATANTE</h3>
-                                            <div class="signature-line"></div>
-                                            <div class="signature-name" id="previewSign1Name">Nome</div>
-                                            <div class="signature-date">Data: ......./......./...........</div>
-                                        </div>
-                                        <div class="signature-box">
-                                            <h3 id="previewSign2">PREPOSTO CONTRATADA</h3>
-                                            <div class="signature-line"></div>
-                                            <div class="signature-name" id="previewSign2Name">Nome</div>
-                                            <div class="signature-date">Data: ......./......./...........</div>
-                                        </div>
-                                    </div>
+                        <!-- Right Column - Real-Time PDF Preview -->
+                        <div class="config-preview-section">
+                            <div class="pdf-preview-header">
+                                <h3>📄 Preview PDF em Tempo Real</h3>
+                                <div class="pdf-controls">
+                                    <button class="pdf-nav-btn" id="prevPage" disabled>◀ Anterior</button>
+                                    <span class="pdf-page-info">
+                                        Página <span id="currentPage">1</span> de <span id="totalPages">1</span>
+                                    </span>
+                                    <button class="pdf-nav-btn" id="nextPage" disabled>Próxima ▶</button>
+                                    <button class="pdf-zoom-btn" id="zoomOut">🔍-</button>
+                                    <span class="pdf-zoom-info"><span id="zoomLevel">100</span>%</span>
+                                    <button class="pdf-zoom-btn" id="zoomIn">🔍+</button>
                                 </div>
+                            </div>
+                            <div class="pdf-preview-container">
+                                <canvas id="pdfCanvas"></canvas>
+                                <div class="pdf-loading" id="pdfLoading">
+                                    <div class="spinner"></div>
+                                    <p>Gerando PDF...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="macrosTab">
+                    <div class="macros-content">
+                        <div class="config-section">
+                            <h3>⌨️ Configuração de Macros</h3>
+                            <p class="macro-description">Configure textos que serão inseridos nos comentários das imagens usando as teclas do teclado numérico (1-9).</p>
+                            
+                            <div class="macros-grid">
+                                <div class="macro-item">
+                                    <label>Numpad 1:</label>
+                                    <input type="text" id="macro1" placeholder="Texto para tecla 1" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 2:</label>
+                                    <input type="text" id="macro2" placeholder="Texto para tecla 2" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 3:</label>
+                                    <input type="text" id="macro3" placeholder="Texto para tecla 3" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 4:</label>
+                                    <input type="text" id="macro4" placeholder="Texto para tecla 4" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 5:</label>
+                                    <input type="text" id="macro5" placeholder="Texto para tecla 5" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 6:</label>
+                                    <input type="text" id="macro6" placeholder="Texto para tecla 6" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 7:</label>
+                                    <input type="text" id="macro7" placeholder="Texto para tecla 7" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 8:</label>
+                                    <input type="text" id="macro8" placeholder="Texto para tecla 8" maxlength="100">
+                                </div>
+                                <div class="macro-item">
+                                    <label>Numpad 9:</label>
+                                    <input type="text" id="macro9" placeholder="Texto para tecla 9" maxlength="100">
+                                </div>
+                            </div>
+                            
+                            <div class="macro-instructions">
+                                <h4>📝 Como usar:</h4>
+                                <ol>
+                                    <li>Configure os textos dos macros acima</li>
+                                    <li>Selecione uma imagem na lista</li>
+                                    <li>Pressione uma tecla do teclado numérico (1-9) para adicionar o texto correspondente aos comentários</li>
+                                    <li>Múltiplos macros podem ser usados - cada um será adicionado em uma nova linha</li>
+                                </ol>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="tab-content" id="questionnaireTab">
-                    <div class="config-section">
-                        <h3>📋 Configurações do Questionário</h3>
-                        <p>Configurações do questionário serão implementadas aqui.</p>
+                    <div class="questionnaire-content">
+                        <div class="config-section">
+                            <h3>📋 Configurações do Questionário</h3>
+                            <p>Configurações do questionário serão implementadas aqui.</p>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="cancelBtn" class="btn btn-secondary">Cancelar</button>
-                <button id="saveConfigBtn" class="btn btn-primary">Salvar Configurações</button>
+                <div class="config-file-management">
+                    <div class="file-actions">
+                        <button type="button" id="loadConfigBtn" class="btn btn-info">
+                            📁 Carregar Configuração
+                        </button>
+                        <button type="button" id="exportConfigBtn" class="btn btn-success">
+                            💾 Exportar Configuração
+                        </button>
+                        <button type="button" id="resetConfigBtn" class="btn btn-warning">
+                            🔄 Restaurar Padrões
+                        </button>
+                    </div>
+                    <small class="file-help-text">
+                        Gerencia configurações completas (PDF + Macros) em arquivo config.json
+                    </small>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelBtn" class="btn btn-secondary">Cancelar</button>
+                    <button id="saveConfigBtn" class="btn btn-primary">Salvar Configurações</button>
+                </div>
             </div>
         </div>
     </div>
@@ -282,12 +343,16 @@
     <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <!-- PDF.js for real-time PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
     <!-- Application Scripts -->
     <script src="js/utils.js"></script>
     <script src="js/imageProcessor.js"></script>
     <script src="js/mapManager.js"></script>
     <script src="js/pdfGenerator.js"></script>
+    <script src="js/fileManager.js"></script>
+    <script src="js/configManager.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

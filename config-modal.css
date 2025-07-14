@@ -1,154 +1,347 @@
-/* Configuration Modal Styles */
-.config-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
+/* Form Styling - Updated 2025-07-14 11:12:25 */
+/* All form sections should have consistent tight spacing */
+.config-section {
+    margin-bottom: 0.25rem;  /* Reduced from 0.5rem to 0.25rem for extremely tight fit */
 }
 
-.config-modal {
-    background: white;
-    border-radius: 15px;
-    max-width: 95vw;
-    max-height: 95vh;
-    width: 1400px;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.config-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.config-header h2 {
-    margin: 0;
+/* This applies to ALL config sections including "Configuração da Capa" and "Informações de Rodapé" */
+.config-section h3 {
     color: #2d3748;
-    font-size: 1.5rem;
-}
-
-.config-close-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #718096;
-    padding: 0;
-    width: 30px;
-    height: 30px;
+    margin-bottom: 0.25rem;  /* Reduced from 0.5rem to 0.25rem */
+    padding-bottom: 0.05rem;  /* Reduced from 0.125rem to 0.05rem */
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 1rem;  /* Reduced from 1.1rem to 1rem */
+    font-weight: 600;
     display: flex;
     align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s ease;
+    gap: 0.5rem;
 }
 
-.config-close-btn:hover {
-    background: #f1f1f1;
+/* This applies to ALL form groups in both sections */
+.form-group {
+    margin-bottom: 0.25rem;  /* Reduced from 0.5rem to 0.25rem for extremely tight fit */
 }
 
-.config-tabs {
-    display: flex;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
-}
-
-.config-tab-btn {
-    padding: 1rem 2rem;
-    border: none;
-    background: transparent;
-    color: #718096;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-.config-tab-btn.active {
-    color: #667eea;
-    border-bottom-color: #667eea;
-    background: white;
-}
-
-.config-tab-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
-}
-
-.config-content {
-    padding: 2rem;
-    /* Remove max-height and overflow to let modal handle scrolling */
-}
-
-.config-tab-content {
-    display: none;
-}
-
-.config-tab-content.active {
+.form-group label {
     display: block;
+    margin-bottom: 0.05rem;  /* Reduced from 0.125rem to 0.05rem */
+    font-weight: 600;
+    color: #4a5568;
+    font-size: 0.8rem;  /* Reduced from 0.85rem to 0.8rem */
 }
 
-.config-split {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.4rem 0.6rem;  /* Reduced from 0.5rem 0.65rem to 0.4rem 0.6rem */
+    border: 2px solid #e2e8f0;
+    border-radius: 4px;  /* Reduced from 5px to 4px */
+    font-size: 0.85rem;  /* Reduced from 0.9rem to 0.85rem */
+    transition: all 0.2s ease;
+    font-family: inherit;
+    background: white;
+    box-sizing: border-box;
 }
 
-.config-form {
-    display: flex;
-    flex-direction: column;
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
 }
 
-.config-form h3 {
+.form-group textarea {
+    min-height: 40px;  /* Reduced from 50px to 40px */
+    resize: vertical;
+}
+
+/* Button Styling */
+.btn {
+    padding: 0.6rem 1.2rem;  /* Reduced from 0.75rem 1.5rem */
+    border-radius: 6px;  /* Slightly smaller radius */
+    font-weight: 500;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #f7fafc;
+    color: #4a5568;
+    border: 2px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Preview Section Styling */
+.preview-section {
+    margin-top: 2rem;
+    padding: 2rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.preview-section h3 {
     color: #2d3748;
     margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e2e8f0;
     font-size: 1.2rem;
+    font-weight: 600;
 }
 
-.config-section {
+.preview-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.preview-page {
+    background: white;
+    padding: 0;  /* Remove padding to allow absolute positioning */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-family: 'Helvetica', Arial, sans-serif;
+    line-height: 1.6;
+    position: relative;
+    overflow: hidden;
+    width: 750px;  /* Increased from 594px - larger scale */
+    height: 530px; /* Increased from 420px - larger scale */
+    margin: 0 auto;
+}
+
+.preview-header {
+    text-align: center;
     margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-.config-form label {
-    display: block;
-    margin-bottom: 0.5rem;
-    margin-top: 1rem;
-    font-weight: 500;
+.logo-placeholder {
+    display: inline-block;
+    background: #f0f4f8;
+    border: 2px dashed #cbd5e0;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    color: #718096;
+    border-radius: 4px;
+    margin: 0.5rem;
+}
+
+.preview-content {
+    margin: 2rem 0;
+}
+
+.preview-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.9rem;
     color: #4a5568;
 }
 
-.config-form input,
-.config-form textarea {
-    width: 100%;
-    padding: 0.75rem;
+/* Signature Preview */
+.signature-preview {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.signature-box {
+    flex: 1;
+    text-align: center;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 8px;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
+}
+
+.signature-box h3 {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    color: #2d3748;
+}
+
+.signature-line {
+    width: 100%;
+    height: 2px;
+    background: #cbd5e0;
+    margin: 2rem 0 1rem;
+}
+
+.signature-name {
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.signature-date {
     font-size: 0.9rem;
-    transition: border-color 0.2s ease;
-    font-family: inherit;
+    color: #718096;
 }
 
-.config-form input:focus,
-.config-form textarea:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .config-split {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    
+    .config-form-section {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .config-preview-section {
+        background: white;
+    }
+    
+    .preview-container {
+        padding: 1rem;
+    }
+    
+    .preview-page {
+        width: 400px;
+        height: 280px;
+        padding: 15px 20px;
+        font-size: 10px;
+    }
 }
 
-.config-form textarea {
-    min-height: 60px;
-    resize: vertical;
+@media (max-width: 1024px) {
+    .modal-content {
+        width: 90vw;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 1.5rem 2rem;
+    }
+    
+    .config-form-section,
+    .config-preview-section {
+        padding: 2rem;
+    }
+    
+    .signature-preview {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .preview-page {
+        width: 480px; /* Medium scale for tablet - landscape */
+        height: 340px; /* Maintain landscape aspect ratio */
+        padding: 25px 30px;
+        font-size: 9px;
+    }
+    
+    .logo-container {
+        width: 60px;
+        height: 45px;
+        font-size: 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .config-form-section,
+    .config-preview-section {
+        padding: 1.5rem;
+    }
+    
+    .config-tabs {
+        padding: 0 1.5rem;
+    }
+    
+    .tab-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .preview-page {
+        width: 350px; /* Smaller scale for mobile - landscape */
+        height: 245px; /* Maintain landscape aspect ratio */
+        padding: 15px 20px;
+        font-size: 8px;
+    }
+    
+    .logo-container {
+        width: 40px;
+        height: 30px;
+        font-size: 6px;
+        top: 10px;
+    }
+    
+    .logo-left {
+        left: 10px;
+    }
+    
+    .logo-right {
+        right: 10px;
+    }
+
+    .preview-page::before,
+    .preview-page::after {
+        font-size: 5px;
+        padding: 1px 3px;
+        top: 6px;
+    }
+    
+    .cover-page .preview-header1,
+    .cover-page .preview-header2 {
+        font-size: 6px;
+    }
+    
+    .cover-page .preview-title {
+        font-size: 7px;
+    }
+    
+    .signature-page .signature-preview {
+        gap: 20px;
+    }
+    
+    .signature-page .signature-box {
+        width: 60px;
+    }
 }
 
 .config-preview {
@@ -173,35 +366,39 @@
     margin: 0 0 1rem 0;
 }
 
-/* PDF Preview Styling to match actual PDF output - A4 Landscape */
+/* PDF Preview Styling - WYSIWYG Model */
 .pdf-preview {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;  /* Increased gap */
+    background: #f5f5f5;
+    padding: 1.5rem;  /* Increased padding */
+    border-radius: 8px;
 }
 
 .preview-pages-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 2rem;  /* Increased gap between pages */
     align-items: center;
 }
 
 .preview-page {
-    /* A4 landscape dimensions scaled up for larger modal */
-    width: 520px; /* Increased scale factor: 297mm * 1.75 ≈ 520px */
-    height: 364px; /* Increased scale factor: 210mm * 1.73 ≈ 364px */
+    /* A4 landscape dimensions for accurate preview */
+    width: 594px; /* A4 landscape width: 297mm * 2 scale factor */
+    height: 420px; /* A4 landscape height: 210mm * 2 scale factor */
     background: white;
     position: relative;
-    padding: 24px 35px; /* Scaled margins: 20mm * 1.75 ≈ 35px */
-    font-family: 'Helvetica', Arial, sans-serif;
+    padding: 40px; /* 20mm margins * 2 scale factor */
+    font-family: 'Arial', sans-serif;
     border: 1px solid #ddd;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    font-size: 12px; /* Base font size for scaling */
-    line-height: 1.2;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 11px;
+    line-height: 1.3;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .preview-page-label {
@@ -209,7 +406,197 @@
     font-size: 12px;
     font-weight: bold;
     color: #666;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    background: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+/* Logo positioning for landscape orientation - adjusted for larger scale */
+.logo-left {
+    left: 38px;  /* 15mm * 2.5 (2.5px per mm scale) */
+    top: 75px;   /* 30mm * 2.5 (2.5px per mm scale) */
+}
+
+.logo-right {
+    right: 100px; /* 40mm * 2.5 (2.5px per mm scale) */
+    top: 60px;    /* 24mm * 2.5 (2.5px per mm scale) */
+}
+
+/* Logo containers - adjusted for larger scale */
+.logo-container {
+    position: absolute;
+    width: 100px;  /* 40mm * 2.5 (2.5px per mm scale) */
+    height: 62px;  /* 25mm * 2.5 (2.5px per mm scale) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.logo-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* Logo preview in form */
+.logo-preview {
+    display: none;
+    width: 100px;
+    height: 60px;
+    object-fit: contain;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 8px;
+    background-color: #f9f9f9;
+}
+
+.logo-preview[src] {
+    display: block;
+}
+
+/* Cover Page Specific Styles */
+.cover-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.cover-page .preview-header {
+    text-align: center;
+    margin-top: 75px; /* 30mm * 2.5 (2.5px per mm scale) */
+    margin-bottom: 50px;
+}
+
+.cover-page .preview-header h1 {
+    font-size: 16px;  /* Increased font size */
+    font-weight: bold;
+    line-height: 1.3;
+    margin: 0 0 25px 0; /* 10mm * 2.5 (2.5px per mm scale) */
+    color: #333;
+}
+
+.cover-page .preview-header h2 {
+    font-size: 16px;  /* Increased font size */
+    font-weight: bold;
+    line-height: 1.3;
+    margin: 0 0 50px 0; /* 20mm * 2.5 (2.5px per mm scale) */
+    color: #333;
+}
+
+.cover-page .preview-title {
+    font-size: 18px;  /* Increased font size */
+    font-weight: bold;
+    margin: 0 0 50px 0; /* 20mm * 2.5 (2.5px per mm scale) */
+    color: #333;
+    line-height: 1.3;
+    text-align: center;
+    border: 2px solid #333;
+    padding: 18px;    /* Increased padding */
+    border-radius: 8px;
+}
+
+.cover-page .preview-content {
+    position: absolute;
+    top: 200px; /* 80mm * 2.5 (2.5px per mm scale) */
+    left: 100px; /* 40mm * 2.5 (2.5px per mm scale) */
+    right: 100px; /* 40mm * 2.5 (2.5px per mm scale) */
+    text-align: left;
+    font-size: 14px;  /* Increased font size */
+    line-height: 1.6;
+    color: #333;
+}
+
+.cover-page .preview-content p {
+    margin: 25px 0; /* 10mm * 2.5 (2.5px per mm scale) */
+}
+
+.cover-page .preview-content strong {
+    font-weight: bold;
+}
+
+.cover-page .preview-footer {
+    position: absolute;
+    bottom: 50px; /* 20mm * 2.5 (2.5px per mm scale) */
+    left: 0;
+    right: 0;
+    font-size: 10px;  /* Increased font size */
+    color: #666;
+    line-height: 1.4;
+    text-align: center;
+}
+
+/* Signature Page Specific Styles */
+.signature-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.signature-page .signature-preview {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    margin-top: 120px;  /* Increased for larger scale */
+}
+
+.signature-page .signature-box {
+    text-align: center;
+    width: 200px;  /* Increased width */
+    padding: 25px;  /* Increased padding */
+}
+
+.signature-page .signature-box h3 {
+    font-size: 14px;  /* Increased font size */
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 50px;  /* Increased margin */
+}
+
+.signature-page .signature-line {
+    width: 100%;
+    height: 1px;
+    background: #333;
+    margin: 35px 0 20px 0;  /* Increased margins */
+}
+
+.signature-page .signature-name {
+    font-size: 12px;  /* Increased font size */
+    color: #333;
+    margin-bottom: 25px;  /* Increased margin */
+    font-weight: bold;
+}
+
+.signature-page .signature-date {
+    font-size: 12px;  /* Increased font size */
+    color: #333;
+}
+
+.signature-page .signature-location {
+    position: absolute;
+    bottom: 125px;  /* Increased for larger scale */
+    left: 50px;     /* Increased for larger scale */
+    right: 50px;    /* Increased for larger scale */
+    font-size: 12px;  /* Increased font size */
+    color: #333;
+    text-align: center;
+}
+
+.signature-page .preview-footer {
+    position: absolute;
+    bottom: 50px;   /* Increased for larger scale */
+    left: 50px;     /* Increased for larger scale */
+    right: 50px;    /* Increased for larger scale */
+    font-size: 12px;  /* Increased font size */
+    color: #666;
+    line-height: 1.4;
+    text-align: center;
 }
 
 /* Logo placeholders - scaled for larger landscape A4 */
@@ -435,54 +822,519 @@
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
 }
 
-/* Responsive design for config modal */
-@media (max-width: 768px) {
-    .config-modal {
-        width: 95vw;
-        max-height: 95vh;
+/* Modal Overlay and Content Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    max-width: 98vw;  /* Increased from 95vw */
+    max-height: 98vh; /* Increased from 95vh */
+    width: 1400px;    /* Reverted back to 1400px from 1600px */
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
     }
-    
-    .config-split {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
     }
-    
-    .config-header h2 {
-        font-size: 1.2rem;
+}
+
+.modal-header {
+    padding: 2rem 2.5rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #2d3748;
+    font-size: 1.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #718096;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.close-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #4a5568;
+    transform: scale(1.1);
+}
+
+.close-btn:active {
+    transform: scale(0.95);
+}
+
+.modal-body {
+    padding: 0;
+    overflow-y: auto;
+    max-height: calc(98vh - 140px);  /* Increased from 95vh */
+}
+
+.modal-footer {
+    padding: 1.5rem 2.5rem;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    position: sticky;
+    bottom: 0;
+}
+
+.config-file-management {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.file-help-text {
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin: 0;
+    max-width: 300px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Tab Content Layout */
+.tab-content {
+    display: none;
+    padding: 0;
+    background: white;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Tab Styles */
+.config-tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0 2.5rem;
+    gap: 0.5rem;
+}
+
+.tab-btn {
+    padding: 1rem 2rem;
+    border: none;
+    background: transparent;
+    color: #718096;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    background: white;
+    box-shadow: 0 -2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.tab-btn:hover:not(.active) {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+/* Two Column Layout for PDF Configuration */
+.config-split {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;  /* Reverted back to original ratio */
+    gap: 1rem;  /* Reduced from 2rem to 1rem */
+    height: calc(95vh - 200px);
+    max-height: 900px;  /* Reverted back to 900px from 1000px */
+}
+
+/* Left Column - Configuration Form */
+.config-form-section {
+    padding: 1.5rem;  /* Reduced from 2.5rem to 1.5rem */
+    overflow-y: auto;
+    border-right: 1px solid #e2e8f0;
+}
+
+/* Right Column - Preview Section */
+.config-preview-section {
+    padding: 1rem;  /* Reduced from 2.5rem to 1rem */
+    background: #f8fafc;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Preview Section Styling */
+.preview-section {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-section h3 {
+    color: #2d3748;
+    margin-bottom: 0.75rem;  /* Reduced from 1.5rem to 0.75rem */
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: center;
+    padding-bottom: 0.5rem;  /* Reduced from 1rem to 0.5rem */
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.preview-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;  /* Reduced from 2rem to 1rem */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+}
+
+/* PDF Viewer Container */
+.pdf-viewer-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* PDF Viewer Controls */
+.pdf-viewer-controls {
+    background: #444;
+    color: white;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    min-height: 32px;
+}
+
+.pdf-nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pdf-nav-controls button {
+    background: #666;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.pdf-nav-controls button:hover:not(:disabled) {
+    background: #777;
+}
+
+.pdf-nav-controls button:disabled {
+    background: #555;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.pdf-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pdf-zoom-controls button {
+    background: #666;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.pdf-zoom-controls button:hover {
+    background: #777;
+}
+
+/* PDF Canvas Container */
+.pdf-canvas-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2px;  /* Minimal padding to maximize space */
+    overflow: auto;
+    background: #e9e9e9;
+}
+
+.pdf-canvas {
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background: white;
+    width: 95%;  /* Use 95% of container width */
+    height: auto;  /* Maintain aspect ratio */
+    max-width: none;  /* Remove max-width constraint */
+    max-height: none;  /* Remove max-height constraint */
+    transform: none;  /* Remove scale transform to let natural sizing work */
+    transform-origin: top center;
+}
+
+/* Loading indicator */
+.pdf-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100px;
+    font-size: 14px;
+    color: #666;
+}
+
+.pdf-loading.hidden {
+    display: none;
+}
+
+/* Macros Tab Styling */
+.macros-content {
+    padding: 1rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.macro-description {
+    font-size: 0.9rem;
+    color: #4a5568;
+    margin-bottom: 1.5rem;
+    background: #f7fafc;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.macros-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.macro-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.macro-item label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.macro-item label::before {
+    content: '⌨️';
+    font-size: 1rem;
+}
+
+.macro-item input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    background: white;
+    box-sizing: border-box;
+}
+
+.macro-item input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.macro-item input:hover {
+    border-color: #cbd5e0;
+}
+
+.macro-instructions {
+    background: #f7fafc;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.macro-instructions h4 {
+    color: #2d3748;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.macro-instructions ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: #4a5568;
+}
+
+.macro-instructions li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Macro Actions Button */
+.macro-actions {
+    margin-top: 1rem;
+    text-align: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.macro-actions .btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.macro-actions .btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.macro-actions .btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+}
+
+.macro-actions .btn-success {
+    background: #48bb78;
+    color: white;
+}
+
+.macro-actions .btn-success:hover {
+    background: #38a169;
+    transform: translateY(-1px);
+}
+
+.macro-actions .btn-info {
+    background: #3182ce;
+    color: white;
+}
+
+.macro-actions .btn-info:hover {
+    background: #2c5aa0;
+    transform: translateY(-1px);
+}
+
+.macro-actions .btn-secondary {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.macro-actions .btn-secondary:hover {
+    background: #cbd5e0;
+    transform: translateY(-1px);
+}
+
+/* Responsive design for macros grid */
+@media (min-width: 768px) {
+    .macros-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
     }
-    
-    .config-content {
-        padding: 1rem;
-    }
-    
-    .preview-page {
-        width: 350px; /* Smaller scale for mobile */
-        height: 245px;
-        padding: 15px 20px;
-        font-size: 8px;
-    }
-    
-    .preview-page::before,
-    .preview-page::after {
-        font-size: 5px;
-        padding: 1px 3px;
-        top: 6px;
-    }
-    
-    .cover-page .preview-header1,
-    .cover-page .preview-header2 {
-        font-size: 6px;
-    }
-    
-    .cover-page .preview-title {
-        font-size: 7px;
-    }
-    
-    .signature-page .signature-preview {
-        gap: 20px;
-    }
-    
-    .signature-page .signature-box {
-        width: 60px;
+}
+
+@media (min-width: 1024px) {
+    .macros-grid {
+        grid-template-columns: repeat(3, 1fr);
     }
 }

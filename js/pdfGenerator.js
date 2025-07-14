@@ -44,14 +44,23 @@ class PDFGenerator {
             AppUtils.showLoading('Adding cover page...');
             await this.addCoverPage(config);
             
+            // Add location summary pages if we have the data
+            if (analysisResults && (analysisResults.quadras?.length > 0 || analysisResults.canteiros?.length > 0)) {
+                if (analysisResults.quadras?.length > 0) {
+                    AppUtils.showLoading('Adding Quadras summary...');
+                    await this.addQuadraSummaryPage(analysisResults.quadras);
+                }
+                
+                if (analysisResults.canteiros?.length > 0) {
+                    AppUtils.showLoading('Adding Canteiros summary...');
+                    await this.addCanteiroSummaryPage(analysisResults.canteiros);
+                }
+            }
+            
             // Add image pages with progress tracking
             AppUtils.showLoading('Processing images...');
             await this.addImagePages(images);
             
-            // Add final signature page
-            AppUtils.showLoading('Adding signature page...');
-            this.addSignaturePage(config);
-
             // Fix page numbering for all pages
             AppUtils.showLoading('Finalizing PDF...');
             this.fixPageNumbers();
@@ -121,32 +130,28 @@ class PDFGenerator {
             return window.app.getPDFConfiguration();
         }
         
-        // Fallback to localStorage
-        const savedConfig = localStorage.getItem('pdfConfiguration');
-        if (savedConfig) {
-            try {
-                return JSON.parse(savedConfig);
-            } catch (error) {
-                console.error('Error parsing saved configuration:', error);
-            }
-        }
-        
-        // Return default configuration
-        return {
-            header1: 'DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE',
-            header2: 'UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS',
-            title: 'RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC',
-            datePrefix: 'DATA DO RELATÓRIO:',
-            referenceNumber: 'CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA',
-            description: 'Vistoria de campo realizada pelos técnicos da DAV.',
-            address: 'Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP',
-            postalCode: '13083-877',
-            contactPhone: 'mascard@unicamp.br',
-            sign1: 'PREPOSTO CONTRATANTE',
-            sign1Name: 'sign1_name',
-            sign2: 'PREPOSTO CONTRATADA',
-            sign2Name: 'sign2_name'
+        // Get configuration from form fields
+        const config = {
+            header1: this.getFieldValue('header1', 'DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE'),
+            header2: this.getFieldValue('header2', 'UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS'),
+            title: this.getFieldValue('title', 'RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC'),
+            datePrefix: this.getFieldValue('datePrefix', 'DATA DO RELATÓRIO:'),
+            referenceNumber: this.getFieldValue('referenceNumber', 'CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA'),
+            description: this.getFieldValue('description', 'Vistoria de campo realizada pelos técnicos da DAV.'),
+            address: this.getFieldValue('address', 'Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP'),
+            postalCode: this.getFieldValue('postalCode', '13083-877'),
+            contactPhone: this.getFieldValue('contactPhone', 'mascard@unicamp.br')
         };
+
+        return config;
+    }
+
+    /**
+     * Get field value from form or default
+     */
+    getFieldValue(fieldId, defaultValue) {
+        const field = document.getElementById(fieldId);
+        return field ? field.value : defaultValue;
     }
     
     /**
@@ -158,22 +163,23 @@ class PDFGenerator {
         const rightLogoOffset = 40; // 40mm from right edge
         const maxLogoHeight = 25; // Maximum height for logos
         
-        // Load and add logos with original proportions
+        // Load and add logos with actual logo images
         try {
-            // Left logo (Logo_001.png) positioned 30mm from top
+            // Left logo - load from Logo_001.png
             const leftLogoInfo = await this.loadLogoImage('Logo_001.png');
-            
-            // Calculate dimensions to fit within max height while preserving aspect ratio
-            let leftLogoHeight = maxLogoHeight;
-            let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
-            
-            // If width exceeds reasonable bounds, scale down
-            if (leftLogoWidth > 40) {
-                leftLogoWidth = 40;
-                leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+            if (leftLogoInfo) {
+                // Calculate dimensions to fit within max height while preserving aspect ratio
+                let leftLogoHeight = maxLogoHeight;
+                let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
+                
+                // If width exceeds reasonable bounds, scale down
+                if (leftLogoWidth > 40) {
+                    leftLogoWidth = 40;
+                    leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+                }
+                
+                this.doc.addImage(leftLogoInfo.dataURL, 'PNG', leftLogoOffset, 30, leftLogoWidth, leftLogoHeight);
             }
-            
-            this.doc.addImage(leftLogoInfo.dataURL, 'PNG', leftLogoOffset, 30, leftLogoWidth, leftLogoHeight);
         } catch (error) {
             console.error('Error loading left logo:', error);
             // Fallback to placeholder
@@ -184,22 +190,23 @@ class PDFGenerator {
             this.doc.setFont('helvetica', 'normal');
             this.doc.text('LOGO', leftLogoOffset + 12.5, 42.5, { align: 'center' });
         }
-        
+
         try {
-            // Right logo (Logo_002.png) positioned 24mm from top
+            // Right logo - load from Logo_002.png
             const rightLogoInfo = await this.loadLogoImage('Logo_002.png');
-            
-            // Calculate dimensions to fit within max height while preserving aspect ratio
-            let rightLogoHeight = maxLogoHeight;
-            let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
-            
-            // If width exceeds reasonable bounds, scale down
-            if (rightLogoWidth > 40) {
-                rightLogoWidth = 40;
-                rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+            if (rightLogoInfo) {
+                // Calculate dimensions to fit within max height while preserving aspect ratio
+                let rightLogoHeight = maxLogoHeight;
+                let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
+                
+                // If width exceeds reasonable bounds, scale down
+                if (rightLogoWidth > 40) {
+                    rightLogoWidth = 40;
+                    rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+                }
+                
+                this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - rightLogoOffset - rightLogoWidth, 24, rightLogoWidth, rightLogoHeight);
             }
-            
-            this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - rightLogoOffset - rightLogoWidth, 24, rightLogoWidth, rightLogoHeight);
         } catch (error) {
             console.error('Error loading right logo:', error);
             // Fallback to placeholder
@@ -747,8 +754,61 @@ class PDFGenerator {
     /**
      * Add signature page (exactly as shown in screenshot)
      */
-    addSignaturePage(config) {
+    async addSignaturePage(config) {
         this.doc.addPage();
+        
+        // Add logos to signature page (actual logo images)
+        const maxLogoHeight = 20; // Maximum height for signature page logos
+        
+        try {
+            // Left logo - load from Logo_001.png
+            const leftLogoInfo = await this.loadLogoImage('Logo_001.png');
+            if (leftLogoInfo) {
+                let leftLogoHeight = maxLogoHeight;
+                let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
+                
+                if (leftLogoWidth > 30) {
+                    leftLogoWidth = 30;
+                    leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+                }
+                
+                this.doc.addImage(leftLogoInfo.dataURL, 'PNG', this.margin, 10, leftLogoWidth, leftLogoHeight);
+            }
+        } catch (error) {
+            console.error('Error loading left logo for signature page:', error);
+            // Fallback to placeholder
+            this.doc.setDrawColor(150, 150, 150);
+            this.doc.setFillColor(240, 240, 240);
+            this.doc.rect(this.margin, 10, 20, 20, 'FD');
+            this.doc.setFontSize(6);
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.text('LOGO', this.margin + 10, 22, { align: 'center' });
+        }
+        
+        try {
+            // Right logo - load from Logo_002.png
+            const rightLogoInfo = await this.loadLogoImage('Logo_002.png');
+            if (rightLogoInfo) {
+                let rightLogoHeight = maxLogoHeight;
+                let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
+                
+                if (rightLogoWidth > 30) {
+                    rightLogoWidth = 30;
+                    rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+                }
+                
+                this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - this.margin - rightLogoWidth, 10, rightLogoWidth, rightLogoHeight);
+            }
+        } catch (error) {
+            console.error('Error loading right logo for signature page:', error);
+            // Fallback to placeholder
+            this.doc.setDrawColor(150, 150, 150);
+            this.doc.setFillColor(240, 240, 240);
+            this.doc.rect(this.pageWidth - this.margin - 20, 10, 20, 20, 'FD');
+            this.doc.setFontSize(6);
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.text('LOGO', this.pageWidth - this.margin - 10, 22, { align: 'center' });
+        }
         
         // Position signatures in the middle of the page (as shown in screenshot)
         this.currentY = this.pageHeight / 2 - 20;
@@ -839,24 +899,25 @@ class PDFGenerator {
         // Get configuration for header text
         const config = this.getPDFConfiguration();
         
-        // Add logo images with original proportions (as shown in screenshots)
+        // Add logo images with actual logo images (as shown in screenshots)
         const maxLogoHeight = 20; // Maximum height for image page logos
         
         try {
-            // Left logo (Logo_001.png)
+            // Left logo - load from Logo_001.png
             const leftLogoInfo = await this.loadLogoImage('Logo_001.png');
-            
-            // Calculate dimensions to fit within max height while preserving aspect ratio
-            let leftLogoHeight = maxLogoHeight;
-            let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
-            
-            // If width exceeds reasonable bounds, scale down
-            if (leftLogoWidth > 30) {
-                leftLogoWidth = 30;
-                leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+            if (leftLogoInfo) {
+                // Calculate dimensions to fit within max height while preserving aspect ratio
+                let leftLogoHeight = maxLogoHeight;
+                let leftLogoWidth = leftLogoHeight * leftLogoInfo.aspectRatio;
+                
+                // If width exceeds reasonable bounds, scale down
+                if (leftLogoWidth > 30) {
+                    leftLogoWidth = 30;
+                    leftLogoHeight = leftLogoWidth / leftLogoInfo.aspectRatio;
+                }
+                
+                this.doc.addImage(leftLogoInfo.dataURL, 'PNG', this.margin, 10, leftLogoWidth, leftLogoHeight);
             }
-            
-            this.doc.addImage(leftLogoInfo.dataURL, 'PNG', this.margin, 10, leftLogoWidth, leftLogoHeight);
         } catch (error) {
             console.error('Error loading left logo for image page:', error);
             // Fallback to placeholder
@@ -869,20 +930,21 @@ class PDFGenerator {
         }
         
         try {
-            // Right logo (Logo_002.png)
+            // Right logo - load from Logo_002.png
             const rightLogoInfo = await this.loadLogoImage('Logo_002.png');
-            
-            // Calculate dimensions to fit within max height while preserving aspect ratio
-            let rightLogoHeight = maxLogoHeight;
-            let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
-            
-            // If width exceeds reasonable bounds, scale down
-            if (rightLogoWidth > 30) {
-                rightLogoWidth = 30;
-                rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+            if (rightLogoInfo) {
+                // Calculate dimensions to fit within max height while preserving aspect ratio
+                let rightLogoHeight = maxLogoHeight;
+                let rightLogoWidth = rightLogoHeight * rightLogoInfo.aspectRatio;
+                
+                // If width exceeds reasonable bounds, scale down
+                if (rightLogoWidth > 30) {
+                    rightLogoWidth = 30;
+                    rightLogoHeight = rightLogoWidth / rightLogoInfo.aspectRatio;
+                }
+                
+                this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - this.margin - rightLogoWidth, 10, rightLogoWidth, rightLogoHeight);
             }
-            
-            this.doc.addImage(rightLogoInfo.dataURL, 'PNG', this.pageWidth - this.margin - rightLogoWidth, 10, rightLogoWidth, rightLogoHeight);
         } catch (error) {
             console.error('Error loading right logo for image page:', error);
             // Fallback to placeholder
@@ -943,6 +1005,104 @@ class PDFGenerator {
     }
     
     /**
+     * Generate a PDF for configuration preview
+     * @param {Object} config - PDF configuration object
+     * @param {Array} images - Optional images array for preview
+     * @returns {Promise<Blob>} PDF blob for preview
+     */
+    async generateConfigPDF(config, images = []) {
+        try {
+            // Initialize jsPDF (landscape mode for A4)
+            const { jsPDF } = window.jspdf;
+            this.doc = new jsPDF('landscape', 'mm', 'a4');
+            this.pageHeight = 210; // A4 landscape height
+            this.pageWidth = 297;  // A4 landscape width
+            this.currentY = this.margin;
+
+            // Generate cover page
+            await this.addCoverPage(config);
+            
+            // Add sample image page if images available
+            if (images && images.length > 0) {
+                const sampleImage = images.find(img => img.imageSelected) || images[0];
+                if (sampleImage) {
+                    this.doc.addPage();
+                    this.currentY = this.margin;
+                    await this.addSingleImagePage(sampleImage, config);
+                }
+            } else {
+                // Add a sample image page with placeholder
+                this.doc.addPage();
+                this.currentY = this.margin;
+                await this.addSampleImagePage(config);
+            }
+
+            // Return as blob
+            return this.doc.output('blob');
+
+        } catch (error) {
+            console.error('Error generating config PDF:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Add a sample image page for preview when no images are available
+     */
+    async addSampleImagePage(config) {
+        try {
+            // Header with logos
+            await this.addPageHeader(config);
+
+            // Add sample content
+            this.currentY += 15;
+            
+            // Page title
+            this.doc.setFont('helvetica', 'bold');
+            this.doc.setFontSize(14);
+            this.doc.text('REGISTRO FOTOGRÁFICO', this.pageWidth / 2, this.currentY, { align: 'center' });
+            this.currentY += 15;
+
+            // Sample image placeholder
+            const imageWidth = 120;
+            const imageHeight = 90;
+            const centerX = this.pageWidth / 2;
+            const imageX = centerX - (imageWidth / 2);
+
+            // Draw placeholder rectangle
+            this.doc.setDrawColor(200);
+            this.doc.setFillColor(245, 245, 245);
+            this.doc.rect(imageX, this.currentY, imageWidth, imageHeight, 'FD');
+            
+            // Add placeholder text
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.setFontSize(12);
+            this.doc.setTextColor(150);
+            this.doc.text('Sample Image', centerX, this.currentY + imageHeight/2, { align: 'center' });
+            this.doc.text('Preview Mode', centerX, this.currentY + imageHeight/2 + 5, { align: 'center' });
+
+            this.currentY += imageHeight + 10;
+
+            // Sample image info
+            this.doc.setTextColor(0);
+            this.doc.setFontSize(10);
+            this.doc.text('Foto: Sample_001.jpg', imageX, this.currentY);
+            this.currentY += 5;
+            this.doc.text('Data: ' + new Date().toLocaleDateString('pt-BR'), imageX, this.currentY);
+            this.currentY += 5;
+            this.doc.text('Coordenadas: -22.8190, -47.0608', imageX, this.currentY);
+            this.currentY += 5;
+            this.doc.text('Localização: Cidade Universitária, Campinas - SP', imageX, this.currentY);
+
+            // Page footer
+            this.addPageFooter();
+
+        } catch (error) {
+            console.error('Error adding sample image page:', error);
+        }
+    }
+
+    /**
      * Load logo image from file path and return as data URL with original dimensions
      */
     async loadLogoImage(logoPath) {
@@ -983,7 +1143,206 @@ class PDFGenerator {
             img.src = logoPath;
         });
     }
-}
 
-// Export the class
-window.PDFGenerator = PDFGenerator;
+    /**
+     * Add a single image page for preview purposes
+     */
+    async addSingleImagePage(image, config) {
+        try {
+            // Add page header
+            await this.addImagePageHeader();
+            
+            // Add image with metadata (use left position but center the whole layout)
+            await this.addImageWithMetadata(image, 1, 'left');
+            
+            // Add page footer
+            this.addImagePageFooter();
+            
+        } catch (error) {
+            console.error('Error adding single image page:', error);
+            // Add error placeholder instead
+            this.currentY += 15;
+            
+            this.doc.setFont('helvetica', 'bold');
+            this.doc.setFontSize(14);
+            this.doc.text('REGISTRO FOTOGRÁFICO', this.pageWidth / 2, this.currentY, { align: 'center' });
+            this.currentY += 20;
+
+            // Error message
+            this.doc.setFont('helvetica', 'normal');
+            this.doc.setFontSize(12);
+            this.doc.setTextColor(200, 0, 0);
+            this.doc.text('Erro ao carregar imagem para preview', this.pageWidth / 2, this.currentY, { align: 'center' });
+            this.doc.setTextColor(0);
+        }
+    }
+
+    /**
+     * Add Quadra summary page with table
+     */
+    async addQuadraSummaryPage(quadraData) {
+        this.addLocationSummaryPages(quadraData, 'Quadra', 'quadra');
+    }
+
+    /**
+     * Add Canteiro summary page with table
+     */
+    async addCanteiroSummaryPage(canteiroData) {
+        this.addLocationSummaryPages(canteiroData, 'Canteiro', 'canteiro');
+    }
+
+    /**
+     * Draw a location table (Quadra or Canteiro)
+     */
+    drawLocationTable(data, startX, startY, width, headerType, dataKey) {
+        if (!data || data.length === 0) return;
+
+        const rowHeight = 6;
+        const headerHeight = 8;
+        let currentY = startY;
+
+        // Adjust column widths - give more space to SIGLA column
+        const numberColWidth = width * 0.2;    // 20% for number column (reduced from 33%)
+        const siglaColWidth = width * 0.5;     // 50% for SIGLA column (increased from 33%)
+        const statusColWidth = width * 0.3;    // 30% for status column (reduced from 33%)
+
+        // Table header
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.setFontSize(10);
+        this.doc.setFillColor(200, 200, 200);
+        
+        // Header row background
+        this.doc.rect(startX, currentY, width, headerHeight, 'F');
+        
+        // Header borders with new column widths
+        this.doc.setLineWidth(0.5);
+        this.doc.setDrawColor(0, 0, 0);
+        this.doc.rect(startX, currentY, numberColWidth, headerHeight); // Number column
+        this.doc.rect(startX + numberColWidth, currentY, siglaColWidth, headerHeight); // Sigla column
+        this.doc.rect(startX + numberColWidth + siglaColWidth, currentY, statusColWidth, headerHeight); // Estado column
+
+        // Header text with adjusted positions
+        this.doc.setTextColor(0, 0, 0);
+        this.doc.text(headerType, startX + numberColWidth/2, currentY + headerHeight/2 + 1, { align: 'center' });
+        this.doc.text('Sigla', startX + numberColWidth + siglaColWidth/2, currentY + headerHeight/2 + 1, { align: 'center' });
+        this.doc.text('Estado', startX + numberColWidth + siglaColWidth + statusColWidth/2, currentY + headerHeight/2 + 1, { align: 'center' });
+
+        currentY += headerHeight;
+
+        // Table rows
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setFontSize(9);
+
+        data.forEach((item, index) => {
+            // Alternate row colors
+            if (index % 2 === 1) {
+                this.doc.setFillColor(245, 245, 245);
+                this.doc.rect(startX, currentY, width, rowHeight, 'F');
+            }
+
+            // Row borders with new column widths
+            this.doc.rect(startX, currentY, numberColWidth, rowHeight);
+            this.doc.rect(startX + numberColWidth, currentY, siglaColWidth, rowHeight);
+            this.doc.rect(startX + numberColWidth + siglaColWidth, currentY, statusColWidth, rowHeight);
+
+            // Cell content
+            const numberValue = item[dataKey];
+            const siglaValue = item.sigla;
+            const statusValue = item.status;
+
+            // Add background color to Estado cell based on status
+            if (statusValue === 'Concluído') {
+                this.doc.setFillColor(220, 255, 220); // Very light pastel green
+            } else if (statusValue === 'Parcial') {
+                this.doc.setFillColor(255, 255, 200); // Very light pastel yellow
+            } else {
+                this.doc.setFillColor(255, 230, 235); // Very light pastel pink
+            }
+            this.doc.rect(startX + numberColWidth + siglaColWidth, currentY, statusColWidth, rowHeight, 'F');
+
+            // Add text content with adjusted positions
+            this.doc.setTextColor(0, 0, 0);
+            this.doc.text(String(numberValue), startX + numberColWidth/2, currentY + rowHeight/2 + 1, { align: 'center' });
+            this.doc.text(siglaValue, startX + numberColWidth + siglaColWidth/2, currentY + rowHeight/2 + 1, { align: 'center' });
+            
+            // Status with color (text color on colored background)
+            this.doc.setTextColor(0, 0, 0); // Keep text black for better readability on colored background
+            this.doc.text(statusValue, startX + numberColWidth + siglaColWidth + statusColWidth/2, currentY + rowHeight/2 + 1, { align: 'center' });
+            this.doc.setTextColor(0, 0, 0); // Reset color
+
+            currentY += rowHeight;
+        });
+    }
+
+    /**
+     * Add location summary pages with pagination support
+     */
+    addLocationSummaryPages(data, headerType, dataKey) {
+        const maxRowsPerPage = 40; // Maximum rows per page (20 per column)
+        const totalPages = Math.ceil(data.length / maxRowsPerPage);
+        
+        for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+            this.doc.addPage();
+            this.currentY = this.margin + 10;
+
+            // Title with page number if multiple pages
+            this.doc.setFont('helvetica', 'bold');
+            this.doc.setFontSize(16);
+            const titleText = totalPages > 1 ? `Tabela: ${headerType} (${pageNum + 1}/${totalPages})` : `Tabela: ${headerType}`;
+            this.doc.text(titleText, this.margin, this.currentY);
+            this.currentY += 10;
+
+            // Get data for this page
+            const startIndex = pageNum * maxRowsPerPage;
+            const endIndex = Math.min(startIndex + maxRowsPerPage, data.length);
+            const pageData = data.slice(startIndex, endIndex);
+
+            // Create table with 2 columns side by side
+            const colWidth = (this.pageWidth - 2 * this.margin - 10) / 2; // 10mm gap between columns
+            const leftColX = this.margin;
+            const rightColX = this.margin + colWidth + 10;
+
+            // Split data into two columns
+            const midPoint = Math.ceil(pageData.length / 2);
+            const leftColumnData = pageData.slice(0, midPoint);
+            const rightColumnData = pageData.slice(midPoint);
+
+            // Draw left column
+            this.drawLocationTable(leftColumnData, leftColX, this.currentY, colWidth, headerType, dataKey);
+            
+            // Draw right column
+            this.drawLocationTable(rightColumnData, rightColX, this.currentY, colWidth, headerType, dataKey);
+
+            // Add footer
+            this.addStandardFooter();
+        }
+    }
+
+    /**
+     * Add standard footer (same as other pages)
+     */
+    addStandardFooter() {
+        const config = this.getPDFConfiguration();
+        
+        // Footer line
+        const footerY = this.pageHeight - 25;
+        this.doc.setLineWidth(0.5);
+        this.doc.setDrawColor(0, 0, 0);
+        this.doc.line(this.margin, footerY, this.pageWidth - this.margin, footerY);
+        
+        // Footer text
+        this.doc.setFontSize(8);
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setTextColor(0, 0, 0);
+        
+        // Address line
+        this.doc.text(config.address, this.pageWidth / 2, footerY + 6, { align: 'center' });
+        
+        // Contact info
+        this.doc.text(`CEP: ${config.postalCode} - Tel: (19) 3521-7010 - Fax: (19) 3521-7635`, 
+                     this.pageWidth / 2, footerY + 11, { align: 'center' });
+        
+        this.doc.text(config.contactPhone, this.pageWidth / 2, footerY + 16, { align: 'center' });
+    }
+
+}

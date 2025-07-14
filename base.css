@@ -68,3 +68,22 @@ main {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Comment Footer Styles */
+.comment-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+/* Macro Hint Styles */
+.macro-hint {
+    font-size: 0.75rem;
+    color: #666;
+    font-style: italic;
+}
+
+.macro-hint:hover {
+    color: #333;
+}

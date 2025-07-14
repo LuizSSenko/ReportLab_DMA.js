@@ -1,0 +1,24 @@
+{
+  "pdf": {
+    "header1": "DAV - DIRETORIA DE ÁREAS VERDES / DMA - DIVISÃO DE MEIO AMBIENTE",
+    "header2": "UNICAMP - UNIVERSIDADE ESTADUAL DE CAMPINAS",
+    "title": "RELATÓRIO DE REALIZAÇÃO DE SERVIÇOS - PROVAC",
+    "datePrefix": "DATA DO RELATÓRIO:",
+    "referenceNumber": "CONTRATO Nº: 039/2019 - PROVAC TERCEIRIZAÇÃO DE MÃO DE OBRA LTDA",
+    "description": "Vistoria de campo realizada pelos técnicos da DAV.",
+    "address": "Rua 5 de Junho, 251 - Cidade Universitária Zeferino Vaz - Campinas - SP",
+    "postalCode": "13083-877",
+    "contactPhone": "mascard@unicamp.br"
+  },
+  "macros": {
+    "macro1": "JUJUBA",
+    "macro2": "XUXU",
+    "macro3": "Poda realizada",
+    "macro4": "Irrigação funcionando",
+    "macro5": "Problemas de drenagem",
+    "macro6": "Equipamento danificado",
+    "macro7": "Manutenção necessária",
+    "macro8": "Área em bom estado",
+    "macro9": "Observações adicionais"
+  }
+}

@@ -327,8 +327,8 @@ class MapManager {
                     if (turf.booleanPointInPolygon(point, feature)) {
                         return {
                             status: 'Inside region',
-                            region: feature.properties?.name || feature.properties?.Sigla || 'Unnamed region',
-                            sigla: feature.properties?.Sigla || null,
+                            region: feature.properties?.Sigla || feature.properties?.sigla || feature.properties?.name || 'Unnamed region',
+                            sigla: feature.properties?.Sigla || feature.properties?.sigla || null,
                             properties: feature.properties || {}
                         };
                     }
