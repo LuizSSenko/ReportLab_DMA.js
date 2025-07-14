@@ -392,40 +392,29 @@ class ImageGeoApp {
                         
                         for (const feature of this.geojsonData.features) {
                             try {
-                                // Calculate distance from point to polygon border/edge
-                                const distance = turf.pointToPolygon(point, feature, { units: 'kilometers' });
+                                // Calculate distance from point to polygon border/edge using line segments
+                                let minDistanceToEdge = Infinity;
                                 
-                                if (distance < nearestDistance) {
-                                    nearestDistance = distance;
+                                // Get the polygon coordinates
+                                const coords = feature.geometry.coordinates[0]; // Assuming first ring for exterior
+                                
+                                // Create line segments from polygon edges and find closest point on any edge
+                                for (let i = 0; i < coords.length - 1; i++) {
+                                    const lineSegment = turf.lineString([coords[i], coords[i + 1]]);
+                                    const nearestPoint = turf.nearestPointOnLine(lineSegment, point);
+                                    const distanceToEdge = turf.distance(point, nearestPoint, { units: 'kilometers' });
+                                    
+                                    if (distanceToEdge < minDistanceToEdge) {
+                                        minDistanceToEdge = distanceToEdge;
+                                    }
+                                }
+                                
+                                if (minDistanceToEdge < nearestDistance) {
+                                    nearestDistance = minDistanceToEdge;
                                     nearestFeature = feature;
                                 }
                             } catch (error) {
                                 console.warn('Error calculating distance to polygon border:', error);
-                                // Alternative method: calculate distance to polygon boundary using nearestPointOnLine
-                                try {
-                                    let minDistanceToEdge = Infinity;
-                                    
-                                    // Get the polygon coordinates
-                                    const coords = feature.geometry.coordinates[0]; // Assuming first ring for exterior
-                                    
-                                    // Create line segments from polygon edges and find closest point on any edge
-                                    for (let i = 0; i < coords.length - 1; i++) {
-                                        const lineSegment = turf.lineString([coords[i], coords[i + 1]]);
-                                        const nearestPoint = turf.nearestPointOnLine(lineSegment, point);
-                                        const distanceToEdge = turf.distance(point, nearestPoint, { units: 'kilometers' });
-                                        
-                                        if (distanceToEdge < minDistanceToEdge) {
-                                            minDistanceToEdge = distanceToEdge;
-                                        }
-                                    }
-                                    
-                                    if (minDistanceToEdge < nearestDistance) {
-                                        nearestDistance = minDistanceToEdge;
-                                        nearestFeature = feature;
-                                    }
-                                } catch (edgeError) {
-                                    console.warn('Error calculating edge distance, skipping polygon:', edgeError);
-                                }
                             }
                         }
                         
