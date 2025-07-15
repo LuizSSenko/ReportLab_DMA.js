@@ -94,6 +94,49 @@
     transform: translateY(-1px);
 }
 
+/* New button color classes for modal footer */
+.btn-info {
+    background: #3182ce;
+    color: white;
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.3);
+}
+
+.btn-info:hover {
+    background: #2c5aa0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.4);
+}
+
+.btn-success {
+    background: #48bb78;
+    color: white;
+    box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+}
+
+.btn-success:hover {
+    background: #38a169;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+}
+
+.btn-warning {
+    background: #ed8936;
+    color: white;
+    box-shadow: 0 2px 8px rgba(237, 137, 54, 0.3);
+}
+
+.btn-warning:hover {
+    background: #dd6b20;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.4);
+}
+
+/* Smaller buttons for modal footer */
+.modal-footer .btn {
+    padding: 0.5rem 1rem;  /* Smaller padding for footer buttons */
+    font-size: 0.85rem;    /* Smaller font size */
+}
+
 .btn:active {
     transform: translateY(0);
 }
@@ -342,6 +385,73 @@
     .signature-page .signature-box {
         width: 60px;
     }
+}
+
+/* Responsive design for modal footer */
+@media (max-width: 768px) {
+    .modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+    }
+    
+    .config-file-management {
+        order: 2;  /* Put file management buttons below main actions on mobile */
+    }
+    
+    .modal-actions {
+        order: 1;
+        justify-content: center;
+    }
+    
+    .file-actions {
+        justify-content: center;
+    }
+    
+    .modal-footer .btn {
+        padding: 0.75rem 1rem;  /* Slightly larger on mobile for better touch targets */
+        font-size: 0.9rem;
+    }
+}
+
+.config-file-management {
+    display: flex;
+    flex-direction: row;  /* Horizontal layout */
+    align-items: center;
+    gap: 1rem;
+}
+
+.file-actions {
+    display: flex;
+    flex-direction: row;  /* Horizontal layout */
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.modal-actions {
+    display: flex;
+    flex-direction: row;  /* Horizontal layout */
+    gap: 1rem;
+    align-items: center;
+}
+
+.file-help-text {
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin: 0;
+    max-width: 300px;
+    margin-left: 0.5rem;  /* Small margin to separate from buttons */
+}
+
+/* Ensure adequate spacing in config sections */
+.config-form-section {
+    padding: 2rem 2.5rem;
+    padding-bottom: 2rem;  /* Extra bottom padding */
+}
+
+.config-form-section:last-child {
+    padding-bottom: 3rem;  /* Extra bottom padding for last section */
 }
 
 .config-preview {
@@ -920,42 +1030,60 @@
 .modal-body {
     padding: 0;
     overflow-y: auto;
-    max-height: calc(98vh - 140px);  /* Increased from 95vh */
+    max-height: calc(98vh - 160px);  /* Increased space for footer */
+    padding-bottom: 1rem;  /* Add bottom padding to prevent content from touching footer */
 }
 
 .modal-footer {
-    padding: 1.5rem 2.5rem;
+    padding: 1rem 2.5rem;  /* Reduced top/bottom padding */
     border-top: 1px solid #e2e8f0;
     background: #f8fafc;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
+    justify-content: center;  /* Center all buttons horizontally */
+    align-items: center;
     gap: 1rem;
     position: sticky;
     bottom: 0;
+    min-height: 80px;  /* Set minimum height to prevent content shifting */
+    flex-wrap: wrap;  /* Allow wrapping if needed */
 }
 
-.config-file-management {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+/* Responsive design for modal footer */
+@media (max-width: 768px) {
+    .modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+    }
+    
+    .config-file-management {
+        order: 2;  /* Put file management buttons below main actions on mobile */
+    }
+    
+    .modal-actions {
+        order: 1;
+        justify-content: center;
+    }
+    
+    .file-actions {
+        justify-content: center;
+    }
+    
+    .modal-footer .btn {
+        padding: 0.75rem 1rem;  /* Slightly larger on mobile for better touch targets */
+        font-size: 0.9rem;
+    }
 }
 
-.file-actions {
-    display: flex;
-    gap: 0.75rem;
+/* Ensure adequate spacing in config sections */
+.config-form-section {
+    padding: 2rem 2.5rem;
+    padding-bottom: 2rem;  /* Extra bottom padding */
 }
 
-.file-help-text {
-    color: #6b7280;
-    font-size: 0.75rem;
-    margin: 0;
-    max-width: 300px;
-}
-
-.modal-actions {
-    display: flex;
-    gap: 1rem;
+.config-form-section:last-child {
+    padding-bottom: 3rem;  /* Extra bottom padding for last section */
 }
 
 /* Tab Content Layout */
@@ -963,6 +1091,9 @@
     display: none;
     padding: 0;
     background: white;
+    height: calc(95vh - 200px);  /* Fixed height for all tabs */
+    max-height: 900px;  /* Max height for all tabs */
+    overflow-y: auto;  /* Add scroll for all tabs if needed */
 }
 
 .tab-content.active {
@@ -1009,8 +1140,7 @@
     display: grid;
     grid-template-columns: 0.8fr 1.2fr;  /* Reverted back to original ratio */
     gap: 1rem;  /* Reduced from 2rem to 1rem */
-    height: calc(95vh - 200px);
-    max-height: 900px;  /* Reverted back to 900px from 1000px */
+    height: 100%;  /* Use full height of tab content */
 }
 
 /* Left Column - Configuration Form */
@@ -1175,8 +1305,10 @@
 /* Macros Tab Styling */
 .macros-content {
     padding: 1rem;
-    max-height: 600px;
+    height: 100%;  /* Use full height of tab content */
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .macro-description {
@@ -1337,4 +1469,13 @@
     .macros-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+}
+
+/* Questionnaire Tab Styling */
+.questionnaire-content {
+    padding: 1rem;
+    height: 100%;  /* Use full height of tab content */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
