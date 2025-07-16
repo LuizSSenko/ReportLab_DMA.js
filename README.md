@@ -3,7 +3,7 @@
 A client-side web application for processing images with GPS data, comparing locations with GeoJSON map data, and generating comprehensive PDF reports. No server required - everything runs in your browser!
 
 ## ✨ Features
-
+ 
 - 📸 **Extract GPS data** from image EXIF metadata
 - 🗺️ **Interactive mapping** with Leaflet.js
 - 📍 **Location analysis** against custom GeoJSON regions
